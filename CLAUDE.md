@@ -23,6 +23,12 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 - Item format in `CATS[id].items`: `[汉字, 词语, 数字标调拼音, [易混干扰项]]`,
   e.g. `['山','山羊','shan1',['shang1','san1']]`. `v` = ü. `py()` converts
   `shan1` → `shān` using standard tone-mark placement rules.
+- **Word scope:** every 汉字 and 词语 in the bank should be within 统编版
+  一年级 + 二年级上册 识字表 (the child is in 二年级上). When adding items,
+  prefer the most basic characters; don't reintroduce rarer ones (e.g. 骂 亿
+  驴 需 炒 刷 烫 躺 were removed for this reason). Items were judged from
+  memory, not checked against the printed 识字表 — trust the user's
+  correction if they flag a character.
 - `EMO` maps 汉字 → emoji picture hint. Characters without an emoji are only
   used in 看字选拼音 questions in hint mode.
 - Question types: `c2p` 看字选拼音, `listen` 听音选拼音 (disabled if no zh voice),
@@ -36,6 +42,9 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   missed), then ≥1 item per category, then remaining slots weighted toward
   categories with more mistakes / fewer stars. One question per 汉字.
   Wrong answers go into the 错题本; correct ones don't remove anything.
+- If an item's 汉字 is replaced, its old `cat|字` keys stay in `mistakes` /
+  `wrongHist` (never delete progress); `mistakeKeys()` skips keys without a
+  matching item, and `buildExam()` only iterates `ALL`.
 - Storage keys: `prog`, `mistakes` (current 错题本, decremented by review),
   `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
   `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,

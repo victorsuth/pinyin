@@ -56,7 +56,10 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   for this: 熟 (shóu), 肚 (dǔ); kept because the other reading is rare or
   taught: 大 说 叶 家 绿 刷 (rare alt), 地 发 (both readings taught).
 - `EMO` maps 汉字 → emoji picture hint. Characters without an emoji are only
-  used in 看字选拼音 questions in hint mode.
+  used in 看字选拼音 questions in hint mode. **The emoji is shown above the
+  词语, so it must depict the whole word, not just the character** (the parent
+  caught ⛰️ shown with 山羊). When changing a word, re-check its emoji; if no
+  emoji fits, drop it (根 半 十 北 是 have none for this reason).
 - Question types: `c2p` 看字选拼音, `listen` 听音选拼音 (disabled if no zh voice),
   `p2c` 看拼音选字 (in hint mode becomes 看拼音选图).
 - 10 questions per lesson; wrong answers are re-queued at the end and added to

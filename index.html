@@ -311,8 +311,9 @@ function speak(text){
   const parts=Array.isArray(text)?text:[text];
   try{
     parts.forEach(t=>{
-      const u=new SpeechSynthesisUtterance(t);
-      u.lang='zh-CN';u.rate=SPEEDS[speedIdx].rate;if(zhVoice)u.voice=zhVoice;
+      const o=typeof t==='string'?{t}:t;
+      const u=new SpeechSynthesisUtterance(o.t);
+      u.lang='zh-CN';u.rate=o.rate||SPEEDS[speedIdx].rate;if(o.pitch)u.pitch=o.pitch;if(zhVoice)u.voice=zhVoice;
       speechSynthesis.speak(u);
     });
     if(speechSynthesis.paused) speechSynthesis.resume();
@@ -325,6 +326,8 @@ function stopSpeech(){
 }
 /* 分成三句念，中间自然停顿：山 …… 山羊 …… 山羊的山 */
 const sayItem=it=>[it.c,it.w,`${it.w}的${it.c}`];
+/* 夸奖语音：比读字快一点、音调高一点，听起来更开心 */
+const cheer=t=>({t,rate:Math.max(SPEEDS[speedIdx].rate,.85),pitch:1.25});
 const SPEEDS=[{name:'很慢',rate:.45},{name:'慢',rate:.6},{name:'正常',rate:.8}];
 let speedIdx=store.get('speed',0);
 /* 提示模式（默认开）：出题时配图、自动读字；看拼音选图片 */
@@ -566,11 +569,12 @@ function answer(btn){
   }else{
     L.combo=0;bumpMistake(it,+1);L.queue.push(makeQ(it,true));sfx('bad');
   }
-  speak(sayItem(it));
+  const praise=ok?PRAISE[Math.floor(Math.random()*PRAISE.length)]:'', combo=ok&&L.combo>=3?`连对 ${L.combo} 题！`:'';
+  speak(ok?[cheer(praise+combo),...sayItem(it)]:sayItem(it));
   const sheet=document.createElement('div');
   sheet.className='sheet '+(ok?'ok':'bad');
   sheet.innerHTML=`<div class="sheet-in">
-    <div class="fb-title">${ok?'✅ '+PRAISE[Math.floor(Math.random()*PRAISE.length)]+(L.combo>=3?` 连对 ${L.combo} 题！`:''):'❌ 正确答案是：'}</div>
+    <div class="fb-title">${ok?'✅ '+praise+(combo?' '+combo:''):'❌ 正确答案是：'}</div>
     <div class="fb-detail">${it.e?it.e+' ':''}<span class="han">${it.c}</span>　<span class="py" style="font-weight:700">${py(it.p)}</span>　<span class="han">${it.w}</span></div>
     ${ok?'':`<div class="tip">💡 ${CATS[it.cat].tip}</div>`}
     <div class="sheet-btns">${voiceOK?'<button class="iconbtn" id="again">🔊</button>':''}
@@ -622,6 +626,7 @@ function finish(){
   document.getElementById('again').onclick=()=>startLesson(mode==='review'&&!mistakeKeys().length?'mix':mode);
   document.getElementById('back').onclick=home;
   sfx('win'); if(stars===3||goalHit) confetti();
+  speak([cheer(msg)].concat(goalHit?[cheer('今天的目标完成啦！')]:[]));
 }
 function finishExam(){
   const A=L.answers,n=A.length,right=A.filter(a=>a.ok).length,score=Math.round(right/n*100);
@@ -653,6 +658,7 @@ function finishExam(){
   document.getElementById('again').onclick=()=>startLesson('exam');
   document.getElementById('back').onclick=home;
   sfx('win'); if(score>=90||goalHit) confetti();
+  speak([cheer(`${score}分！${msg}`)].concat(goalHit?[cheer('今天的目标完成啦！')]:[]));
 }
 function confetti(){
   const e=['⭐','🎉','✨','🌟','🎈'];

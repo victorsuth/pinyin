@@ -50,6 +50,10 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
   `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,
   `today`, `speed`, `hint`.
+- Praise voice: correct answers speak the on-screen praise (+ combo ≥3) via
+  `cheer()` (rate ≥.85, pitch 1.25) before the item reading; lesson/exam
+  result pages speak their message (exam: score first). Wrong answers just
+  read the item. `speak()` accepts strings or `{t,rate,pitch}` parts.
 - Gamification: XP, combo streak, daily goal (3 lessons), day streak, confetti.
 - Settings on home screen: 模式 (看图+读字 default / 挑战不提示), 语速 (很慢 .45 default /
   慢 .6 / 正常 .8), 🔧 声音检测 diagnostics panel.

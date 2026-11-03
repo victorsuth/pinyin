@@ -2,8 +2,13 @@
 """用 MiniMax 语音合成生成预录音频，写入 audio/<voice>/ 和 audio/manifest.js。
 
 用法（在仓库根目录）：
-    python3 tools/gen_audio.py            # 只补缺的文件
-    python3 tools/gen_audio.py --dry-run  # 只列出要生成什么
+    python3 tools/gen_audio.py                 # 只补缺的文件
+    python3 tools/gen_audio.py --dry-run       # 只列出要生成什么
+    python3 tools/gen_audio.py --recheck-tones # 已有的字也重新测声调，不标准的重做
+
+声调检查（装了 praat-parselmouth 时自动开启，见 tools/tones.py）：单念一个字时，
+语音合成常把一声念成升调或降调、三声只降不升。所以每个字的音频生成后测一下开头那个字的
+音高曲线，不标准就换写法（标点、语气、语速）重做，直到标准，实在不行用最接近的那一版。
 
 需要：能访问 api.minimax.cn，并带上 MiniMax 密钥——
 环境变量 MINIMAX_API_KEY，或云端环境的 Network secrets（代理自动加 Authorization）。
@@ -20,9 +25,6 @@ MODEL = "speech-2.8-hd"
 # 声音：目录名 -> MiniMax 音色。目录名带版本号，换音色或参数时改版本，避免浏览器缓存旧文件
 VOICES = {"girl-v1": "lovely_girl"}
 VOICE = "girl-v1"
-
-# 单念一个字时容易读错的多音字：强制按题库里的拼音读
-POLY = set("大地发熟说叶区雨刷家句少色看长")
 
 # 指定读音也管不住的单字：单独念的那一下改用同音、没有多音的字去合成（孩子只听声音）。
 # 熟 单念曾读成 shóu，后来按家长要求换掉了课本没教过另一个读音的常见多音字，所以现在是空的
@@ -60,6 +62,14 @@ global.window={};
     return json.loads(out.strip().splitlines()[-1])
 
 
+# 单字声调不标准时依次试的写法：(单字后的标点, 语气, 语速)
+ITEM_TRIES = [("。", None, 0.8), ("。", "calm", 0.8), ("！", None, 0.8), ("？", None, 0.8), ("。", "happy", 0.8),
+              ("！", "calm", 0.8), ("？", "calm", 0.8), ("。", None, 0.95), ("！", "happy", 0.95),
+              ("？", "happy", 0.95), ("。", "calm", 0.95), ("？", None, 0.95)]
+# 声调小课堂：「第一声，妈。」这样带引导语念，比单念一个字准（测最后那个音节）
+DEMO_TRIES = [("happy", 0.95), ("happy", 0.75), (None, 0.95), (None, 0.75), ("calm", 0.95), ("calm", 0.75), ("happy", 0.85)]
+
+
 def jobs():
     d = page_data()
     seen, js = set(), []
@@ -69,12 +79,13 @@ def jobs():
             continue
         seen.add(key)
         a = SAY_AS.get(it["c"], it["c"])
-        text = f"{a}。<#0.8#>{it['w']}。<#0.8#>{it['w']}的{a}。"
-        pron = [f"{it['c']}/({it['p']})"] if it["c"] in POLY else None
-        js.append(dict(key=key, text=text, pron=pron, speed=ITEM_SPEED, emotion=None))
-    # 声调小课堂：mā má mǎ mà，平静、慢一点，读音写死
+        # 每个字都写死读音（ü 的写法接口文档没说，带 v 的不写）
+        pron = [f"{it['c']}/({it['p']})"] if "v" not in it["p"] else None
+        tries = [dict(text=f"{a}{pu}<#0.8#>{it['w']}。<#0.8#>{it['w']}的{a}。", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
+        js.append(dict(key=key, pron=pron, tone=int(it["p"][-1]), seg="first", tries=tries, **tries[0]))
     for i, t in enumerate(d["TONE_DEMO"]):
-        js.append(dict(key=f"say|{t['c']}", text=t["c"], pron=[f"{t['c']}/(ma{i + 1})"], speed=ITEM_SPEED, emotion=None))
+        tries = [dict(text=f"第{'一二三四'[i]}声，{t['c']}。", emotion=e, speed=sp) for e, sp in DEMO_TRIES]
+        js.append(dict(key=f"say|{t['c']}", pron=[f"{t['c']}/(ma{i + 1})"], tone=i + 1, seg="last", tries=tries, **tries[0]))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]
@@ -132,27 +143,62 @@ def main():
         for f in stale:
             os.remove(os.path.join(outdir, f))
     print(f"{VOICE}: 删掉 {len(stale)} 个不再用的文件")
-    todo = [j for j in all_jobs if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))]
+    try:
+        import tones
+        tones.contour  # noqa
+    except ImportError:
+        tones = None
+        print("没装 praat-parselmouth，不检查声调")
+    recheck = tones and "--recheck-tones" in sys.argv
+    todo = [j for j in all_jobs if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))
+            or (recheck and j.get("tone"))]
     print(f"{VOICE}: {len(todo)} 个文件要生成，约 {sum(len(j['text']) for j in todo)} 字")
     if "--dry-run" in sys.argv:
         for j in todo:
             print(fnv(j["key"]), j["key"], j["pron"] or "")
         return
 
+    def check(j, path):
+        st = tones.contour(path, j["seg"])
+        if st is None:
+            return False, -99
+        d = tones.describe(st)
+        return tones.ok(j["tone"], d), tones.score(j["tone"], d)
+
     def run(j):
         path = os.path.join(outdir, fnv(j["key"]) + ".mp3")
-        data = t2a(j, VOICES[VOICE])
+        if not (tones and j.get("tone")):
+            data = t2a(j, VOICES[VOICE])
+            with open(path + ".tmp", "wb") as f:
+                f.write(data)
+            os.replace(path + ".tmp", path)
+            return j["key"], "ok"
+        best = None
+        if os.path.exists(path):  # --recheck-tones：已有的够标准就留着
+            good, sc = check(j, path)
+            if good:
+                return j["key"], "声调标准，保留"
+            best = (False, sc, open(path, "rb").read(), "原来的")
+        for n, tr in enumerate(j["tries"], 1):
+            data = t2a({**j, **tr}, VOICES[VOICE])
+            with open(path + ".tmp", "wb") as f:
+                f.write(data)
+            good, sc = check(j, path + ".tmp")
+            if best is None or (good, sc) > best[:2]:  # 达标的优先，其次看分数
+                best = (good, sc, data, f"第{n}种写法")
+            if good:
+                break
         with open(path + ".tmp", "wb") as f:
-            f.write(data)
+            f.write(best[2])
         os.replace(path + ".tmp", path)
-        return j["key"], len(data)
+        return j["key"], ("声调标准，用" if best[0] else "都不够标准，用最接近的") + best[3]
 
     fails = []
     with ThreadPoolExecutor(2) as ex:
         for fut in [ex.submit(run, j) for j in todo]:
             try:
-                k, n = fut.result()
-                print("ok", k, n)
+                k, msg = fut.result()
+                print("ok", k, msg, flush=True)
             except Exception as e:
                 fails.append(str(e))
                 print("FAIL", e)

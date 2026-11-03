@@ -94,7 +94,18 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   `python3 tools/gen_audio.py`** (only generates missing files; needs
   `api.minimax.cn` allowed + the key as a Network secret or `MINIMAX_API_KEY`;
   M Plan subscription key works; RPM limit → script uses 2 threads + backoff).
-  Polyphones are forced via `pronunciation_dict` (`POLY` in the script). To
+  Every item's reading is pinned via `pronunciation_dict` (except ü syllables —
+  the API's ü spelling is undocumented). **Tone QA:** isolated syllables from
+  the TTS often come out with the wrong contour (the parent heard 一声 sound
+  neutral and 二/三声 indistinguishable). `tools/tones.py` measures the F0
+  contour of the first syllable (item clips) / last syllable (tone demos) with
+  praat-parselmouth and checks it (一声 high-flat, 二声 rising from low, 三声
+  dip-then-rise with a low minimum, 四声 high falling); `gen_audio.py` retries
+  other punctuation/emotion/speed variants (`ITEM_TRIES`, `DEMO_TRIES`) until
+  it passes, else keeps the closest. Run it with a Python that has
+  `praat-parselmouth numpy` installed (e.g. a venv) — otherwise tone checking
+  is skipped; `--recheck-tones` re-tests existing clips. Tone demos say
+  "第一声，妈。" etc. Still ask the parent to listen to changed clips. To
   change voice/params, bump the dir name (`girl-v1` → `girl-v2`) so the
   immutable cache doesn't serve old files; set `VOICE` in both places.
   Boy voices tried and available for later: `clever_boy`, `cute_boy`.

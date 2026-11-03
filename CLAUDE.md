@@ -23,12 +23,13 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 - Item format in `CATS[id].items`: `[汉字, 词语, 数字标调拼音, [易混干扰项]]`,
   e.g. `['山','山羊','shan1',['shang1','san1']]`. `v` = ü. `py()` converts
   `shan1` → `shān` using standard tone-mark placement rules.
-- **Word scope:** every 汉字 and 词语 in the bank should be within 统编版
-  一年级 + 二年级上册 识字表 (the child is in 二年级上). When adding items,
-  prefer the most basic characters; don't reintroduce rarer ones (e.g. 骂 亿
-  驴 需 炒 刷 烫 躺 were removed for this reason). Items were judged from
-  memory, not checked against the printed 识字表 — trust the user's
-  correction if they flag a character.
+- **Word scope:** every 汉字 and 词语 in the bank is within the 统编版
+  一年级上/下 + 二年级上册 识字表 (300+400+450 chars; the child is in 二年级上,
+  unit 8 as of 2026-11). Verified page-by-page against the textbook PDFs the
+  user supplied (lx-public.oss-cn-beijing.aliyuncs.com …/小学语文课本/语文X年级X册.pdf;
+  the PDF text layer drops some glyphs, so render the 识字表 pages and check
+  visually). Removed as out of scope: 棒 寻 菜 杯 麻 骂 糖 亿 需 驴 户.
+  Re-check any new character before adding it.
 - `EMO` maps 汉字 → emoji picture hint. Characters without an emoji are only
   used in 看字选拼音 questions in hint mode.
 - Question types: `c2p` 看字选拼音, `listen` 听音选拼音 (disabled if no zh voice),

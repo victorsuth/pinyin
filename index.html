@@ -143,6 +143,7 @@ button{font-family:inherit;cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
+<script src="audio/manifest.js"></script>
 <script>
 /* ================= 题库 =================
    拼音用数字标调：shan1 = shān；v 表示 ü
@@ -303,15 +304,41 @@ function loadVoices(){
   if(was!==voiceOK && screen==='home') home();
 }
 /* loadVoices 在文件末尾、所有变量都定义好之后再调用 */
+
+/* 预录音频（tools/gen_audio.py 用 MiniMax 生成，audio/manifest.js 列出有哪些文件）：
+   有音频就播音频——静音拨片打开、微信里也能响；缺哪条才用系统朗读 */
+const VOICE='girl-v1';
+const CLIPS=new Set(((window.AUDIO_CLIPS||{})[VOICE])||[]);
+const hasAudio=CLIPS.size>0, soundOK=()=>hasAudio||voiceOK;
+function fnv(s){let h=0x811c9dc5;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36);}
+/* 文件名 = 内容的哈希，生成脚本用同样的算法 */
+const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:`say|${o.t.replace(/\s+/g,'')}`;
+function clipURL(o){const k=fnv(clipKey(o));return CLIPS.has(k)?`audio/${VOICE}/${k}.mp3`:null;}
+let player=null, playQ=[];
+const warmed=new Set();
+function preload(segs){segs.forEach(o=>{const u=clipURL(o);if(u&&!warmed.has(u)){warmed.add(u);try{fetch(u).catch(()=>{});}catch(e){}}});}
+function playClips(list){
+  if(!player){player=new Audio();player.setAttribute('playsinline','');player.onended=player.onerror=()=>playNext();}
+  playQ=list; playNext();
+}
+/* 几段都用同一个 audio 元素接着播：第一段在点按里开始，iPhone 就允许后面几段自动接上 */
+function playNext(){
+  const c=playQ.shift(); if(!c) return;
+  player.src=c.url; player.defaultPlaybackRate=player.playbackRate=c.rate;
+  try{player.preservesPitch=player.webkitPreservesPitch=true;}catch(e){}
+  try{const p=player.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
+}
 /* 朗读必须在孩子点按的那一刻直接开始（iPhone/iPad 的要求），所以不用任何延时；
    三句一次性排进队列，换题时 cancel() 会把整队清掉 */
 function speak(text){
+  stopSpeech();
+  const segs=(Array.isArray(text)?text:[text]).map(t=>typeof t==='string'?{t}:t);
+  const urls=segs.map(clipURL);
+  if(urls.every(Boolean)) return playClips(segs.map((o,i)=>({url:urls[i],rate:o.it?SPEEDS[speedIdx].play:1})));
   if(!voiceOK||!('speechSynthesis' in window)) return;
-  stopSpeech(true);
-  const parts=Array.isArray(text)?text:[text];
+  const parts=segs.flatMap(o=>o.it?[o.it.c,o.it.w,`${o.it.w}的${o.it.c}`].map(t=>({t})):[o]);
   try{
-    parts.forEach(t=>{
-      const o=typeof t==='string'?{t}:t;
+    parts.forEach(o=>{
       const u=new SpeechSynthesisUtterance(o.t);
       u.lang='zh-CN';u.rate=o.rate||SPEEDS[speedIdx].rate;if(o.pitch)u.pitch=o.pitch;if(zhVoice)u.voice=zhVoice;
       speechSynthesis.speak(u);
@@ -322,13 +349,18 @@ function speak(text){
 /* iPhone 的毛病：没在念的时候也去 cancel()，紧接着的朗读会整段没声音。
    所以只在真正在念 / 排队时才 cancel */
 function stopSpeech(){
+  playQ=[]; if(player&&!player.paused){try{player.pause();}catch(e){}}
   try{ const ss=window.speechSynthesis; if(ss&&(ss.speaking||ss.pending)) ss.cancel(); }catch(e){}
 }
-/* 分成三句念，中间自然停顿：山 …… 山羊 …… 山羊的山 */
-const sayItem=it=>[it.c,it.w,`${it.w}的${it.c}`];
+/* 一个字念三句，中间自然停顿：山 …… 山羊 …… 山羊的山（预录音频是一整段） */
+const sayItem=it=>[{it}];
 /* 夸奖语音：比读字快一点、音调高一点，听起来更开心 */
 const cheer=t=>({t,rate:Math.max(SPEEDS[speedIdx].rate,.85),pitch:1.25});
-const SPEEDS=[{name:'很慢',rate:.45},{name:'慢',rate:.6},{name:'正常',rate:.8}];
+/* rate：系统朗读的语速；play：预录音频的播放倍速 */
+const SPEEDS=[{name:'很慢',rate:.45,play:.85},{name:'慢',rate:.6,play:1},{name:'正常',rate:.8,play:1.2}];
+const LESSON_MSG=['坚持练习，下次更好！','很棒，再接再厉！','全对，太厉害了！'];   // 1/2/3 星
+const EXAM_MSG=['别灰心，错题多练练！','及格啦，继续加油！','考得很不错！','考得太棒了！']; // <60 / 60+ / 70+ / 90+
+const GOAL_MSG='今天的目标完成啦！';
 let speedIdx=store.get('speed',0);
 /* 提示模式（默认开）：出题时配图、自动读字；看拼音选图片 */
 let hintMode=store.get('hint',true);
@@ -399,11 +431,11 @@ function home(){
       <button class="big ${m?'orange':'gray'}" data-mode="review" ${m?'':'disabled'}>📒 错题本复习 ${m?`（${m} 个）`:'（还没有错题）'}</button>
     </div>
     <div class="speedrow">🖼️ 模式：<button class="spd ${hintMode?'on':''}" data-hint="1">看图+读字</button><button class="spd ${hintMode?'':'on'}" data-hint="0">挑战（不提示）</button></div>
-    ${voiceOK?`<div class="speedrow">🔊 语速：${SPEEDS.map((s,i)=>`<button class="spd ${i===speedIdx?'on':''}" data-spd="${i}">${s.name}</button>`).join('')}<button class="spd test" id="tst">试听</button></div>`:''}
-    ${IS_IOS&&voiceOK?`<div class="mutetip">${MUTE_TIP}</div>`:''}
+    ${soundOK()?`<div class="speedrow">🔊 语速：${SPEEDS.map((s,i)=>`<button class="spd ${i===speedIdx?'on':''}" data-spd="${i}">${s.name}</button>`).join('')}<button class="spd test" id="tst">试听</button></div>`:''}
+    ${IS_IOS&&!hasAudio&&voiceOK?`<div class="mutetip">${MUTE_TIP}</div>`:''}
     <div class="speedrow"><button class="spd" id="diagbtn">🔧 声音检测</button></div>
     <div id="diag" hidden class="diag"></div>
-    <p class="foot">${voiceOK?'':'🔇 没找到中文语音，"听音题"已自动关闭<br>'}答错的题会自动收进错题本，复习答对就会移出</p>`;
+    <p class="foot">${soundOK()?'':'🔇 没找到中文语音，"听音题"已自动关闭<br>'}答错的题会自动收进错题本，复习答对就会移出</p>`;
   app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>startLesson(b.dataset.mode));
   app.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>{speedIdx=+b.dataset.spd;store.set('speed',speedIdx);home();speak(sayItem(ITEMS.nasal[0]));});
   app.querySelectorAll('[data-hint]').forEach(b=>b.onclick=()=>{hintMode=b.dataset.hint==='1';store.set('hint',hintMode);home();});
@@ -422,12 +454,14 @@ function showDiag(){
   d.innerHTML=`<div>朗读功能：<b>${ss?'支持':'不支持'}</b></div>
     <div>语音数量：<b>${vs.length}</b>，中文语音：<b>${zh.length?zh.map(v=>v.name+'('+v.lang+')').join('、'):'无'}</b></div>
     <div>当前使用：<b>${zhVoice?zhVoice.name:'系统默认'}</b></div>
+    <div>预录音频：<b>${hasAudio?`有（${CLIPS.size} 段，静音拨片打开也能听到）`:'没有，用系统朗读'}</b></div>
     <div>浏览器：<b>${wx?'微信内置浏览器':/CriOS/.test(ua)?'iPhone Chrome':/Safari/.test(ua)&&/iPhone|iPad/.test(ua)?'iPhone/iPad Safari':'其他'}</b></div>
-    ${wx?'<div style="color:var(--red-d)">⚠️ 微信里经常没法朗读，请点右上角 ··· 选「在浏览器中打开」</div>':''}
+    ${wx&&!hasAudio?'<div style="color:var(--red-d)">⚠️ 微信里经常没法朗读，请点右上角 ··· 选「在浏览器中打开」</div>':''}
     <div class="sheet-btns"><button class="big blue" id="t1">① 测试朗读</button><button class="big orange" id="t2">② 测试提示音</button></div>
     <div class="hint" id="dres" style="margin-top:8px">分别点两个按钮，告诉我哪个有声音</div>`;
   document.getElementById('t1').onclick=()=>{
     const r=document.getElementById('dres');
+    if(hasAudio){speak(sayItem(ITEMS.nasal[0]));r.textContent='▶️ 正在播放预录音频（听不到就把音量调大）';return;}
     if(!ss){r.textContent='这个浏览器不支持朗读';return;}
     try{
       if(ss.speaking||ss.pending) ss.cancel();
@@ -446,7 +480,7 @@ function showDiag(){
 /* ================= 出题 ================= */
 let L=null;
 function makeQ(it,retry=false){
-  const types=CATS[it.cat].types.filter(t=>t!=='listen'||voiceOK);
+  const types=CATS[it.cat].types.filter(t=>t!=='listen'||soundOK());
   let type=types[Math.floor(Math.random()*types.length)];
   if(type==='p2c'&&hintMode){
     // 提示模式：看拼音选图片，只用有图的字；不够就改成看字选拼音
@@ -499,6 +533,7 @@ function startLesson(mode){
   else pool=shuffle(ITEMS[mode].slice()).slice(0,LESSON_LEN);
   if(!pool.length) return home();
   L={mode,queue:pool.map(it=>makeQ(it)),done:0,firstTotal:pool.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[]};
+  preload(PRAISE.map(cheer));
   next();
 }
 function hl(w,c){return w.split(c).join(`<b>${c}</b>`);}
@@ -506,17 +541,18 @@ function next(){
   if(!L.queue.length) return finish();
   stopSpeech();
   L.q=L.queue.shift(); L.answered=false; L.pick=null; screen='lesson';
+  preload(sayItem(L.q.it).concat(L.queue.length?sayItem(L.queue[0].it):[]));
   const exam=L.mode==='exam';
   const q=L.q,it=q.it,total=L.done+L.queue.length+1;
   let prompt='';
   if(q.type==='c2p') prompt=hintMode?`<div class="qlabel">听一听，这个字的拼音是？</div>
     <div class="prompt">${it.e?`<div class="pic">${it.e}</div>`:''}
       <div class="hanmid han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div>
-      ${voiceOK?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>`
+      ${soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>`
     :`<div class="qlabel">选出正确的拼音</div>
     <div class="prompt"><div class="hanbig han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div></div>`;
   else if(q.type==='listen') prompt=`<div class="qlabel">听一听，选出你听到的拼音</div>
-    <div class="prompt"><button class="speaker" id="spk">🔊</button><div class="hint">点喇叭可以再听一遍</div>${IS_IOS?`<div class="mutetip small">${MUTE_TIP}</div>`:''}</div>`;
+    <div class="prompt"><button class="speaker" id="spk">🔊</button><div class="hint">点喇叭可以再听一遍</div>${IS_IOS&&!hasAudio?`<div class="mutetip small">${MUTE_TIP}</div>`:''}</div>`;
   else prompt=`<div class="qlabel">${hintMode?'读一读拼音，选出对的图':'这个拼音是哪个字？'}</div>
     <div class="prompt"><div class="pybig py">${py(it.p)}</div></div>`;
   const isHan=q.type==='p2c', isPic=isHan&&hintMode;
@@ -570,14 +606,14 @@ function answer(btn){
     L.combo=0;bumpMistake(it,+1);L.queue.push(makeQ(it,true));sfx('bad');
   }
   const praise=ok?PRAISE[Math.floor(Math.random()*PRAISE.length)]:'', combo=ok&&L.combo>=3?`连对 ${L.combo} 题！`:'';
-  speak(ok?[cheer(praise+combo),...sayItem(it)]:sayItem(it));
+  speak(ok?[cheer(praise),...(combo?[cheer(combo)]:[]),...sayItem(it)]:sayItem(it));
   const sheet=document.createElement('div');
   sheet.className='sheet '+(ok?'ok':'bad');
   sheet.innerHTML=`<div class="sheet-in">
     <div class="fb-title">${ok?'✅ '+praise+(combo?' '+combo:''):'❌ 正确答案是：'}</div>
     <div class="fb-detail">${it.e?it.e+' ':''}<span class="han">${it.c}</span>　<span class="py" style="font-weight:700">${py(it.p)}</span>　<span class="han">${it.w}</span></div>
     ${ok?'':`<div class="tip">💡 ${CATS[it.cat].tip}</div>`}
-    <div class="sheet-btns">${voiceOK?'<button class="iconbtn" id="again">🔊</button>':''}
+    <div class="sheet-btns">${soundOK()?'<button class="iconbtn" id="again">🔊</button>':''}
     <button class="big ${ok?'green':'red'}" id="cont">继续</button></div></div>`;
   document.body.appendChild(sheet);
   const ag=document.getElementById('again'); if(ag) ag.onclick=()=>speak(sayItem(it));
@@ -611,7 +647,7 @@ function finish(){
   if(L.mode!=='review'){const p=prog[L.mode]||{stars:0,plays:0};p.stars=Math.max(p.stars,stars);p.plays++;prog[L.mode]=p;store.set('prog',prog);}
   const goalHit=tally();
   const emo=stars===3?'🏆':stars===2?'🎉':'💪';
-  const msg=stars===3?'全对，太厉害了！':stars===2?'很棒，再接再厉！':'坚持练习，下次更好！';
+  const msg=LESSON_MSG[stars-1];
   app.innerHTML=`<div class="result"><div class="emo">${emo}</div><h2>${msg}</h2>
     ${starsHTML(stars,'bigstars')}
     ${goalHit?'<p style="font-weight:800;color:var(--orange);font-size:18px">🎯 今天的目标完成啦！</p>':''}
@@ -626,7 +662,7 @@ function finish(){
   document.getElementById('again').onclick=()=>startLesson(mode==='review'&&!mistakeKeys().length?'mix':mode);
   document.getElementById('back').onclick=home;
   sfx('win'); if(stars===3||goalHit) confetti();
-  speak([cheer(msg)].concat(goalHit?[cheer('今天的目标完成啦！')]:[]));
+  speak([cheer(msg)].concat(goalHit?[cheer(GOAL_MSG)]:[]));
 }
 function finishExam(){
   const A=L.answers,n=A.length,right=A.filter(a=>a.ok).length,score=Math.round(right/n*100);
@@ -635,7 +671,7 @@ function finishExam(){
   const wrong=A.filter(a=>!a.ok);
   exams.push({date:ymd(new Date()),score,n,wrong:wrong.map(a=>a.it.cat+'|'+a.it.c)});
   exams=exams.slice(-30); store.set('exams',exams);
-  const [emo,msg]=score>=90?['🏆','考得太棒了！']:score>=70?['🎉','考得很不错！']:score>=60?['👍','及格啦，继续加油！']:['💪','别灰心，错题多练练！'];
+  const lv=score>=90?3:score>=70?2:score>=60?1:0, emo=['💪','👍','🎉','🏆'][lv], msg=EXAM_MSG[lv];
   const cats=ORDER.map(id=>{const as=A.filter(a=>a.it.cat===id);return {id,t:as.length,r:as.filter(a=>a.ok).length};}).filter(x=>x.t);
   const pickTxt=a=>a.type==='p2c'?`<span class="han">${a.pick}</span>`:`<span class="py">${py(a.pick)}</span>`;
   app.innerHTML=`<div class="result"><div class="emo">${emo}</div><h2>${msg}</h2>
@@ -658,7 +694,7 @@ function finishExam(){
   document.getElementById('again').onclick=()=>startLesson('exam');
   document.getElementById('back').onclick=home;
   sfx('win'); if(score>=90||goalHit) confetti();
-  speak([cheer(`${score}分！${msg}`)].concat(goalHit?[cheer('今天的目标完成啦！')]:[]));
+  speak([cheer(`${score}分！`),cheer(msg)].concat(goalHit?[cheer(GOAL_MSG)]:[]));
 }
 function confetti(){
   const e=['⭐','🎉','✨','🌟','🎈'];

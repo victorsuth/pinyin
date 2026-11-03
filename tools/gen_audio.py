@@ -24,6 +24,10 @@ VOICE = "girl-v1"
 # 单念一个字时容易读错的多音字：强制按题库里的拼音读
 POLY = set("大地发熟说叶区雨刷家句少色看长")
 
+# 指定读音也管不住的单字：单独念的那一下改用同音、没有多音的字去合成（孩子只听声音）
+# 熟 单念会读成 shóu（2026-11 家长试听发现）
+SAY_AS = {"熟": "塾"}
+
 ITEM_SPEED, SAY_SPEED = 0.8, 1.0
 
 
@@ -64,7 +68,8 @@ def jobs():
         if key in seen:
             continue
         seen.add(key)
-        text = f"{it['c']}。<#0.8#>{it['w']}。<#0.8#>{it['w']}的{it['c']}。"
+        a = SAY_AS.get(it["c"], it["c"])
+        text = f"{a}。<#0.8#>{it['w']}。<#0.8#>{it['w']}的{a}。"
         pron = [f"{it['c']}/({it['p']})"] if it["c"] in POLY else None
         js.append(dict(key=key, text=text, pron=pron, speed=ITEM_SPEED, emotion=None))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
@@ -116,7 +121,15 @@ def write_manifest():
 def main():
     outdir = os.path.join(ROOT, "audio", VOICE)
     os.makedirs(outdir, exist_ok=True)
-    todo = [j for j in jobs() if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))]
+    all_jobs = jobs()
+    # 题库或提示语改掉后不再用到的旧文件：删掉
+    keep = {fnv(j["key"]) + ".mp3" for j in all_jobs}
+    stale = [f for f in os.listdir(outdir) if f.endswith(".mp3") and f not in keep]
+    if "--dry-run" not in sys.argv:
+        for f in stale:
+            os.remove(os.path.join(outdir, f))
+    print(f"{VOICE}: 删掉 {len(stale)} 个不再用的文件")
+    todo = [j for j in all_jobs if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))]
     print(f"{VOICE}: {len(todo)} 个文件要生成，约 {sum(len(j['text']) for j in todo)} 字")
     if "--dry-run" in sys.argv:
         for j in todo:

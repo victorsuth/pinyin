@@ -17,7 +17,7 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   never rename/remove existing storage keys (the child would lose progress).
 
 ## How the game works
-- 7 categories + 混合挑战 + 错题本复习:
+- 7 categories + 混合挑战 + 错题本复习 + 综合考试:
   `nasal` 前后鼻音, `pingqiao` 平舌翘舌, `shape` 形近字母 (b/d/p/q, m/n, f/t),
   `tone` 声调, `umlaut` ü 的规则, `whole` 整体认读, `triple` 三拼音节.
 - Item format in `CATS[id].items`: `[汉字, 词语, 数字标调拼音, [易混干扰项]]`,
@@ -29,6 +29,17 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   `p2c` 看拼音选字 (in hint mode becomes 看拼音选图).
 - 10 questions per lesson; wrong answers are re-queued at the end and added to
   the 错题本; stars by first-try accuracy (≥90% ★★★, ≥70% ★★).
+- 综合考试 (`mode==='exam'`, `buildExam()`): 20 questions, no per-question
+  feedback — child selects (can change) then taps 下一题/交卷; result page shows
+  score /100, per-category bars and the wrong list. Selection: up to 14 items
+  weighted by `3*mistakes + wrongHist` (current 错题本 first, then items ever
+  missed), then ≥1 item per category, then remaining slots weighted toward
+  categories with more mistakes / fewer stars. One question per 汉字.
+  Wrong answers go into the 错题本; correct ones don't remove anything.
+- Storage keys: `prog`, `mistakes` (current 错题本, decremented by review),
+  `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
+  `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,
+  `today`, `speed`, `hint`.
 - Gamification: XP, combo streak, daily goal (3 lessons), day streak, confetti.
 - Settings on home screen: 模式 (看图+读字 default / 挑战不提示), 语速 (很慢 .45 default /
   慢 .6 / 正常 .8), 🔧 声音检测 diagnostics panel.

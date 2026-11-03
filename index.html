@@ -117,6 +117,26 @@ button{font-family:inherit;cursor:pointer}
 .stat span{font-size:13px;color:var(--muted)}
 .rbtns{display:flex;flex-direction:column;gap:12px;margin-top:10px}
 
+/* exam */
+.bsub{font-size:13px;font-weight:600;opacity:.92;margin-top:3px}
+.opt.sel{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-d)}
+.score{font-size:76px;font-weight:800;line-height:1.1;color:var(--blue-d)}
+.score span{font-size:26px;margin-left:4px}
+.sec{text-align:left;font-size:18px;font-weight:800;margin:22px 0 10px}
+.catrow{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:15px;text-align:left}
+.catrow .cn{width:96px;white-space:nowrap;font-weight:700}
+.catrow .bar{height:12px}
+.catrow .bar>i.low{background:var(--orange)}
+.catrow .cv{width:42px;text-align:right;color:var(--muted);font-weight:700}
+.wlist{display:flex;flex-direction:column;gap:8px}
+.witem{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);border-radius:14px;
+  padding:8px 12px;text-align:left;font-size:16px;color:var(--text);width:100%}
+.witem .we{font-size:30px;min-width:36px;text-align:center}
+.witem .wh{font-size:30px}
+.witem .wd{flex:1;line-height:1.45}
+.witem .no{color:var(--red-d);text-decoration:line-through}
+.witem .yes{color:var(--green-d);font-weight:700}
+
 .confetti{position:fixed;top:-40px;font-size:26px;pointer-events:none;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
 </style>
@@ -234,6 +254,7 @@ const ORDER=['nasal','pingqiao','shape','tone','umlaut','whole','triple'];
 const ITEMS={};let ALL=[];
 ORDER.forEach(id=>{ITEMS[id]=CATS[id].items.map(([c,w,p,d])=>({c,w,p,d,e:EMO[c]||'',cat:id}));ALL=ALL.concat(ITEMS[id]);});
 const LESSON_LEN=10, DAILY_GOAL=3;
+const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
 
 /* ================= 拼音工具 ================= */
 const MARKS={a:'āáǎà',e:'ēéěè',i:'īíǐì',o:'ōóǒò',u:'ūúǔù',v:'ǖǘǚǜ'};
@@ -264,7 +285,10 @@ function curToday(){const t=ymd(new Date());if(today.date!==t)today={date:t,less
 function curStreak(){const t=ymd(new Date()),y=ymd(new Date(Date.now()-864e5));return (streak.last===t||streak.last===y)?streak.count:0;}
 function mistakeKeys(){return Object.entries(mistakes).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([k])=>k);}
 function findItem(k){const [cat,c]=k.split('|');return (ITEMS[cat]||[]).find(i=>i.c===c);}
-function bumpMistake(it,d){const k=it.cat+'|'+it.c;mistakes[k]=Math.max(0,(mistakes[k]||0)+d);if(!mistakes[k])delete mistakes[k];store.set('mistakes',mistakes);}
+/* wrongHist：每道题累计错过几次，只增不减（错题本复习答对会移出，这里还留着，考试用） */
+let wrongHist=store.get('wrongHist',{}), exams=store.get('exams',[]);
+function bumpMistake(it,d){const k=it.cat+'|'+it.c;mistakes[k]=Math.max(0,(mistakes[k]||0)+d);if(!mistakes[k])delete mistakes[k];store.set('mistakes',mistakes);
+  if(d>0){wrongHist[k]=(wrongHist[k]||0)+d;store.set('wrongHist',wrongHist);}}
 
 /* ================= 声音 ================= */
 let zhVoice=null, voiceOK=false, screen='home';
@@ -336,6 +360,7 @@ function sfx(kind){
   if(!actx) return; const n=actx.currentTime;
   if(kind==='ok'){beep(660,n,.12);beep(990,n+.1,.2);}
   else if(kind==='bad'){beep(200,n,.28,'square',.06);}
+  else if(kind==='tap'){beep(520,n,.08,'sine',.08);}
   else if(kind==='win'){[523,659,784,1047].forEach((f,i)=>beep(f,n+i*.12,.25));}
 }
 
@@ -352,6 +377,7 @@ function home(){
   stopSpeech(); document.querySelectorAll('.sheet').forEach(s=>s.remove());
   screen='home';
   const m=mistakeKeys().length;
+  const last=exams[exams.length-1], best=exams.reduce((s,e)=>Math.max(s,e.score),0);
   app.innerHTML=`${topbar()}
     <h1 class="title han">拼音大冒险</h1>
     <p class="sub">每天闯 ${DAILY_GOAL} 关，拼音变高手！</p>
@@ -363,6 +389,8 @@ function home(){
       <div class="cdesc">所有类型随机出题</div>${starsHTML((prog.mix||{}).stars||0)}</button>
     </div>
     <div class="row2" style="grid-template-columns:1fr">
+      <button class="big blue" data-mode="exam">📝 综合考试（${EXAM_LEN} 题）
+        <div class="bsub">${last?`上次 ${last.score} 分 · 最好 ${best} 分`:m||Object.keys(wrongHist).length?'重点考以前错过的题':'七类拼音都会考到'}</div></button>
       <button class="big ${m?'orange':'gray'}" data-mode="review" ${m?'':'disabled'}>📒 错题本复习 ${m?`（${m} 个）`:'（还没有错题）'}</button>
     </div>
     <div class="speedrow">🖼️ 模式：<button class="spd ${hintMode?'on':''}" data-hint="1">看图+读字</button><button class="spd ${hintMode?'':'on'}" data-hint="0">挑战（不提示）</button></div>
@@ -438,21 +466,42 @@ function makeQ(it,retry=false){
   return {it,type,opts:shuffle(set),ans:it.p,retry};
 }
 function unlockSpeech(){ loadVoices(); }
+/* 综合考试出题：① 错过的题优先（错题本里的分量最重，以前错过、已改正的也再考）
+   ② 七类每类至少一题 ③ 剩下的名额多给错得多、星星少的类型。同一个字只考一次 */
+function buildExam(){
+  const picked=[],usedC=new Set();
+  const take=it=>{if(!it||usedC.has(it.c)||picked.length>=EXAM_LEN)return false;usedC.add(it.c);picked.push(it);return true;};
+  const w=it=>{const k=it.cat+'|'+it.c;return 3*(mistakes[k]||0)+(wrongHist[k]||0);};
+  let n=0;
+  for(const {it} of ALL.filter(it=>w(it)>0).map(it=>({it,s:w(it)+Math.random()})).sort((a,b)=>b.s-a.s)){
+    if(n>=EXAM_WRONG_MAX)break; if(take(it))n++;
+  }
+  ORDER.forEach(id=>{if(!picked.some(it=>it.cat===id))take(shuffle(ITEMS[id].filter(it=>!usedC.has(it.c)))[0]);});
+  const cw={};ORDER.forEach(id=>{cw[id]=1+(3-((prog[id]||{}).stars||0))+ITEMS[id].reduce((s,it)=>s+w(it),0)/3;});
+  for(let g=0;picked.length<EXAM_LEN&&g<500;g++){
+    let r=Math.random()*ORDER.reduce((s,id)=>s+cw[id],0),id=ORDER[ORDER.length-1];
+    for(const c of ORDER){if((r-=cw[c])<0){id=c;break;}}
+    take(shuffle(ITEMS[id].filter(it=>!usedC.has(it.c)))[0]);
+  }
+  return shuffle(picked);
+}
 function startLesson(mode){
   unlockAudio(); unlockSpeech();
   let pool;
-  if(mode==='review') pool=mistakeKeys().map(findItem).filter(Boolean).slice(0,LESSON_LEN);
+  if(mode==='exam') pool=buildExam();
+  else if(mode==='review') pool=mistakeKeys().map(findItem).filter(Boolean).slice(0,LESSON_LEN);
   else if(mode==='mix') pool=shuffle(ALL.slice()).slice(0,LESSON_LEN);
   else pool=shuffle(ITEMS[mode].slice()).slice(0,LESSON_LEN);
   if(!pool.length) return home();
-  L={mode,queue:pool.map(it=>makeQ(it)),done:0,firstTotal:pool.length,firstCorrect:0,combo:0,maxCombo:0,gained:0};
+  L={mode,queue:pool.map(it=>makeQ(it)),done:0,firstTotal:pool.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[]};
   next();
 }
 function hl(w,c){return w.split(c).join(`<b>${c}</b>`);}
 function next(){
   if(!L.queue.length) return finish();
   stopSpeech();
-  L.q=L.queue.shift(); L.answered=false; screen='lesson';
+  L.q=L.queue.shift(); L.answered=false; L.pick=null; screen='lesson';
+  const exam=L.mode==='exam';
   const q=L.q,it=q.it,total=L.done+L.queue.length+1;
   let prompt='';
   if(q.type==='c2p') prompt=hintMode?`<div class="qlabel">听一听，这个字的拼音是？</div>
@@ -472,8 +521,11 @@ function next(){
       <div class="bar"><i style="width:${L.done/total*100}%"></i></div>
       <div class="combo">${L.combo>=2?`🔥×${L.combo}`:''}</div></div>
     ${q.retry?'<div class="hint" style="margin-top:14px">🔁 再试一次刚才错的题</div>':''}
+    ${exam?`<div class="hint" style="margin-top:14px;font-weight:700">📝 综合考试 · 第 ${L.done+1} / ${total} 题</div>`:''}
     ${prompt}
-    <div class="opts">${q.opts.map((o,i)=>`<button class="opt ${isPic?'picopt':isHan?'hanopt han':'py'}" data-v="${o}"><span class="k">${i+1}</span>${optHTML(o)}</button>`).join('')}</div>`;
+    <div class="opts">${q.opts.map((o,i)=>`<button class="opt ${isPic?'picopt':isHan?'hanopt han':'py'}" data-v="${o}"><span class="k">${i+1}</span>${optHTML(o)}</button>`).join('')}</div>
+    ${exam?`<button class="big gray" id="exnext" disabled style="width:100%;margin-top:18px">${L.queue.length?'下一题 ➜':'交卷 ✔'}</button>`:''}`;
+  if(exam) document.getElementById('exnext').onclick=examNext;
   document.getElementById('quit').onclick=askQuit;
   app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(b));
   const spk=document.getElementById('spk');
@@ -482,9 +534,10 @@ function next(){
 function askQuit(){
   if(document.querySelector('.sheet')) document.querySelectorAll('.sheet').forEach(x=>x.remove());
   const sh=document.createElement('div');sh.className='sheet bad';
-  sh.innerHTML=`<div class="sheet-in"><div class="fb-title">要退出这一关吗？</div>
-    <div class="fb-detail" style="font-size:16px">这一关的进度不会保存。</div>
-    <div class="sheet-btns"><button class="big green" id="stay">继续闯关</button><button class="big red" id="leave">退出</button></div></div>`;
+  const exam=L&&L.mode==='exam';
+  sh.innerHTML=`<div class="sheet-in"><div class="fb-title">${exam?'要退出考试吗？':'要退出这一关吗？'}</div>
+    <div class="fb-detail" style="font-size:16px">${exam?'这次考试不会算分。':'这一关的进度不会保存。'}</div>
+    <div class="sheet-btns"><button class="big green" id="stay">${exam?'继续考试':'继续闯关'}</button><button class="big red" id="leave">退出</button></div></div>`;
   document.body.appendChild(sh);
   document.getElementById('stay').onclick=()=>{sh.remove(); if(L&&L.answered){next();} };
   document.getElementById('leave').onclick=()=>{sh.remove();home();};
@@ -492,6 +545,13 @@ function askQuit(){
 const PRAISE=['太棒了！','真厉害！','答对啦！','完美！','好样的！','你真聪明！'];
 function answer(btn){
   unlockAudio();
+  if(L.mode==='exam'){
+    // 考试：先选中（可以改），点"下一题"才算数，不当场告诉对错
+    app.querySelectorAll('.opt').forEach(b=>b.classList.toggle('sel',b===btn));
+    L.pick=btn.dataset.v; sfx('tap');
+    const nb=document.getElementById('exnext'); nb.disabled=false; nb.className='big blue';
+    return;
+  }
   if(L.answered) return; L.answered=true;
   const q=L.q,it=q.it,ok=btn.dataset.v===q.ans;
   app.querySelectorAll('.opt').forEach(b=>{b.disabled=true;if(b.dataset.v===q.ans)b.classList.add('ok');});
@@ -518,18 +578,32 @@ function answer(btn){
   document.getElementById('cont').onclick=()=>{sheet.remove();next();};
 }
 
+function examNext(){
+  if(L.pick==null) return;
+  const q=L.q,ok=L.pick===q.ans;
+  L.answers.push({it:q.it,type:q.type,pick:L.pick,ok});
+  L.done++;
+  if(ok){L.firstCorrect++;L.gained+=10;} else bumpMistake(q.it,+1);
+  next();
+}
+
 /* ================= 结算 ================= */
-function finish(){
-  stopSpeech();
-  screen='result';
-  const acc=L.firstCorrect/L.firstTotal, stars=acc>=.9?3:acc>=.7?2:1;
-  const bonus=acc===1?20:5; L.gained+=bonus;
+/* 经验、连续天数、今日目标；返回是否刚好完成今日目标 */
+function tally(){
   xp+=L.gained; store.set('xp',xp);
-  if(L.mode!=='review'){const p=prog[L.mode]||{stars:0,plays:0};p.stars=Math.max(p.stars,stars);p.plays++;prog[L.mode]=p;store.set('prog',prog);}
   const t=ymd(new Date()),y=ymd(new Date(Date.now()-864e5));
   if(streak.last!==t){streak.count=streak.last===y?streak.count+1:1;streak.last=t;store.set('streak',streak);}
   const td=curToday();td.lessons++;td.xp+=L.gained;store.set('today',td);
-  const goalHit=td.lessons===DAILY_GOAL;
+  return td.lessons===DAILY_GOAL;
+}
+function finish(){
+  stopSpeech();
+  screen='result';
+  if(L.mode==='exam') return finishExam();
+  const acc=L.firstCorrect/L.firstTotal, stars=acc>=.9?3:acc>=.7?2:1;
+  const bonus=acc===1?20:5; L.gained+=bonus;
+  if(L.mode!=='review'){const p=prog[L.mode]||{stars:0,plays:0};p.stars=Math.max(p.stars,stars);p.plays++;prog[L.mode]=p;store.set('prog',prog);}
+  const goalHit=tally();
   const emo=stars===3?'🏆':stars===2?'🎉':'💪';
   const msg=stars===3?'全对，太厉害了！':stars===2?'很棒，再接再厉！':'坚持练习，下次更好！';
   app.innerHTML=`<div class="result"><div class="emo">${emo}</div><h2>${msg}</h2>
@@ -547,6 +621,37 @@ function finish(){
   document.getElementById('back').onclick=home;
   sfx('win'); if(stars===3||goalHit) confetti();
 }
+function finishExam(){
+  const A=L.answers,n=A.length,right=A.filter(a=>a.ok).length,score=Math.round(right/n*100);
+  L.gained+=score===100?20:5;
+  const goalHit=tally();
+  const wrong=A.filter(a=>!a.ok);
+  exams.push({date:ymd(new Date()),score,n,wrong:wrong.map(a=>a.it.cat+'|'+a.it.c)});
+  exams=exams.slice(-30); store.set('exams',exams);
+  const [emo,msg]=score>=90?['🏆','考得太棒了！']:score>=70?['🎉','考得很不错！']:score>=60?['👍','及格啦，继续加油！']:['💪','别灰心，错题多练练！'];
+  const cats=ORDER.map(id=>{const as=A.filter(a=>a.it.cat===id);return {id,t:as.length,r:as.filter(a=>a.ok).length};}).filter(x=>x.t);
+  const pickTxt=a=>a.type==='p2c'?`<span class="han">${a.pick}</span>`:`<span class="py">${py(a.pick)}</span>`;
+  app.innerHTML=`<div class="result"><div class="emo">${emo}</div><h2>${msg}</h2>
+    <div class="score">${score}<span>分</span></div>
+    <div class="hint">${n} 题答对 ${right} 题</div>
+    ${goalHit?'<p style="font-weight:800;color:var(--orange);font-size:18px">🎯 今天的目标完成啦！</p>':''}
+    <div class="sec">📊 各类得分</div>
+    ${cats.map(x=>`<div class="catrow"><span class="cn">${CATS[x.id].emoji} ${CATS[x.id].name}</span>
+      <div class="bar"><i class="${x.r/x.t<.7?'low':''}" style="width:${x.r/x.t*100}%"></i></div><span class="cv">${x.r}/${x.t}</span></div>`).join('')}
+    ${wrong.length?`<div class="sec">❌ 错了 ${wrong.length} 题（点一下听读音）</div>
+    <div class="wlist">${wrong.map((a,i)=>`<button class="witem" data-w="${i}"><span class="we">${a.it.e||'🔊'}</span>
+      <span class="wh han">${a.it.c}</span><span class="wd">
+      <span class="yes py">${py(a.it.p)}</span>　<span class="han">${a.it.w}</span><br>
+      <span class="hint">你选的：<span class="no">${pickTxt(a)}</span></span></span></button>`).join('')}</div>`:''}
+    <div class="rbtns" style="margin-top:22px">${wrong.length?'<button class="big orange" id="rev">📒 马上练错题</button>':''}
+    <button class="big green" id="again">再考一次</button>
+    <button class="big blue" id="back">返回首页</button></div></div>`;
+  app.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>speak(sayItem(wrong[+b.dataset.w].it)));
+  const rv=document.getElementById('rev'); if(rv) rv.onclick=()=>startLesson(mistakeKeys().length?'review':'mix');
+  document.getElementById('again').onclick=()=>startLesson('exam');
+  document.getElementById('back').onclick=home;
+  sfx('win'); if(score>=90||goalHit) confetti();
+}
 function confetti(){
   const e=['⭐','🎉','✨','🌟','🎈'];
   for(let i=0;i<32;i++){const s=document.createElement('div');s.className='confetti';
@@ -560,6 +665,8 @@ document.addEventListener('keydown',e=>{
   if(screen!=='lesson')return;
   const c=document.getElementById('cont');
   if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();c.click();return;}
+  const x=document.getElementById('exnext');
+  if(x&&!x.disabled&&(e.key==='Enter'||e.key===' ')){e.preventDefault();x.click();return;}
   if(/^[1-4]$/.test(e.key)){const b=app.querySelectorAll('.opt')[+e.key-1];if(b&&!b.disabled)b.click();}
 });
 

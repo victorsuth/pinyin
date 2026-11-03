@@ -328,7 +328,8 @@ const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:`say|${o.t.replace(/\
 function clipURL(o){const k=fnv(clipKey(o));return CLIPS.has(k)?`audio/${VOICE}/${k}.mp3`:null;}
 let player=null, playQ=[];
 const warmed=new Set();
-function preload(segs){segs.forEach(o=>{const u=clipURL(o);if(u&&!warmed.has(u)){warmed.add(u);try{fetch(u).catch(()=>{});}catch(e){}}});}
+function preload(segs){if(location.protocol==='file:')return;  // 双击本地打开时浏览器不让 fetch，直接播就行
+  segs.forEach(o=>{const u=clipURL(o);if(u&&!warmed.has(u)){warmed.add(u);try{fetch(u).catch(()=>{});}catch(e){}}});}
 function playClips(list){
   if(!player){player=new Audio();player.setAttribute('playsinline','');player.onended=player.onerror=()=>playNext();}
   playQ=list; playNext();

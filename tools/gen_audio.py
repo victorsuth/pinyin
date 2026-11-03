@@ -24,9 +24,9 @@ VOICE = "girl-v1"
 # 单念一个字时容易读错的多音字：强制按题库里的拼音读
 POLY = set("大地发熟说叶区雨刷家句少色看长")
 
-# 指定读音也管不住的单字：单独念的那一下改用同音、没有多音的字去合成（孩子只听声音）
-# 熟 单念会读成 shóu（2026-11 家长试听发现）
-SAY_AS = {"熟": "塾"}
+# 指定读音也管不住的单字：单独念的那一下改用同音、没有多音的字去合成（孩子只听声音）。
+# 熟 单念曾读成 shóu，后来按家长要求换掉了课本没教过另一个读音的常见多音字，所以现在是空的
+SAY_AS = {}
 
 ITEM_SPEED, SAY_SPEED = 0.8, 1.0
 
@@ -55,7 +55,7 @@ const el={innerHTML:'',querySelectorAll:()=>[],onclick:null,hidden:false,textCon
 global.document={getElementById:()=>el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>({...el,remove(){}}),body:{appendChild(){}}};
 global.window={};
 """
-    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG}));"
+    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO}));"
     out = subprocess.run(["node", "-e", stub + js + tail], capture_output=True, text=True, check=True).stdout
     return json.loads(out.strip().splitlines()[-1])
 
@@ -72,6 +72,9 @@ def jobs():
         text = f"{a}。<#0.8#>{it['w']}。<#0.8#>{it['w']}的{a}。"
         pron = [f"{it['c']}/({it['p']})"] if it["c"] in POLY else None
         js.append(dict(key=key, text=text, pron=pron, speed=ITEM_SPEED, emotion=None))
+    # 声调小课堂：mā má mǎ mà，平静、慢一点，读音写死
+    for i, t in enumerate(d["TONE_DEMO"]):
+        js.append(dict(key=f"say|{t['c']}", text=t["c"], pron=[f"{t['c']}/(ma{i + 1})"], speed=ITEM_SPEED, emotion=None))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]

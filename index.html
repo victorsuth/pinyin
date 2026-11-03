@@ -34,6 +34,7 @@ button{font-family:inherit;cursor:pointer}
 .cat:active{transform:translateY(3px);border-bottom-width:2px}
 .cat .emoji{font-size:34px}
 .cat .cname{font-size:18px;font-weight:800;margin-top:4px}
+.cat.wide{grid-column:1/-1;background:#fff8e1;border-color:var(--yellow)}
 .cat .cdesc{font-size:12px;color:var(--muted);margin-top:3px;min-height:16px}
 .stars{color:var(--yellow);font-size:18px;margin-top:4px;letter-spacing:2px}
 .stars .off{color:#ddd}
@@ -82,6 +83,8 @@ button{font-family:inherit;cursor:pointer}
 .opt{background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:16px;
   padding:16px 6px;font-size:32px;font-weight:700;color:var(--text);position:relative;min-height:80px}
 .opt.hanopt{font-size:46px;font-weight:400}
+.opt .tn{font-size:14px;color:var(--muted);font-weight:700;margin-top:2px;font-family:sans-serif;letter-spacing:0}
+.tonedemo{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0;font-size:15px;font-weight:700}
 .opt .k{position:absolute;left:10px;top:8px;font-size:12px;color:#bbb;font-family:sans-serif;font-weight:700;
   border:2px solid var(--line);border-radius:6px;padding:0 5px}
 .opt:active{transform:translateY(3px);border-bottom-width:2px}
@@ -152,25 +155,25 @@ const CATS = {
   nasal:{name:'前后鼻音',emoji:'👃',desc:'an/ang  en/eng  in/ing',types:['c2p','listen','listen','p2c'],
     tip:'前鼻音 n：舌尖顶住上牙床；后鼻音 ng：舌头往后缩，声音从鼻子里出来，像 "嗯——ng"。',
     items:[
-      ['山','山羊','shan1',['shang1','san1']],['伤','受伤','shang1',['shan1','sang1']],
-      ['门','开门','men2',['meng2','min2']],['梦','做梦','meng4',['men4','ming4']],
+      ['山','山羊','shan1',['shang1','san1']],['伤','伤心','shang1',['shan1','sang1']],
+      ['门','门口','men2',['meng2','min2']],['梦','好梦','meng4',['men4','ming4']],
       ['心','开心','xin1',['xing1','xian1']],['星','星星','xing1',['xin1','xiong1']],
       ['林','森林','lin2',['ling2','len2']],['铃','铃声','ling2',['lin2','long2']],
-      ['根','树根','gen1',['geng1','gan1']],['风','大风','feng1',['fen1','fang1']],
-      ['半','一半','ban4',['bang4','ben4']],['房','房子','fang2',['fan2','feng2']],
+      ['根','一根','gen1',['geng1','gan1']],['风','大风','feng1',['fen1','fang1']],
+      ['半','半空','ban4',['bang4','ben4']],['房','房子','fang2',['fan2','feng2']],
       ['船','小船','chuan2',['chuang2','chun2']],['床','起床','chuang2',['chuan2','chang2']],
       ['琴','钢琴','qin2',['qing2','qian2']],['晴','晴天','qing2',['qin2','qiong2']],
-      ['灯','电灯','deng1',['den1','dang1']],['盆','花盆','pen2',['peng2','pin2']],
+      ['灯','灯光','deng1',['den1','dang1']],['盆','澡盆','pen2',['peng2','pin2']],
       ['朋','朋友','peng2',['pen2','pang2']],['新','新年','xin1',['xing1','xun1']]
     ]},
   pingqiao:{name:'平舌翘舌',emoji:'👅',desc:'z c s  /  zh ch sh',types:['c2p','listen','listen','p2c'],
     tip:'平舌 z c s：舌尖平平地抵住下牙；翘舌 zh ch sh：舌尖翘起来，碰到上面的硬腭。',
     items:[
-      ['字','写字','zi4',['zhi4','ci4']],['纸','白纸','zhi3',['zi3','chi3']],
-      ['早','早上','zao3',['zhao3','cao3']],['找','找人','zhao3',['zao3','chao3']],
-      ['草','小草','cao3',['chao3','zao3']],['炒','炒饭','chao3',['cao3','shao3']],
-      ['四','四个','si4',['shi4','xi4']],['十','十个','shi2',['si2','chi2']],
-      ['三','三天','san1',['shan1','sang1']],['吃','吃饭','chi1',['ci1','qi1']],
+      ['字','写字','zi4',['zhi4','ci4']],['纸','纸船','zhi3',['zi3','chi3']],
+      ['早','早上','zao3',['zhao3','cao3']],['找','找到','zhao3',['zao3','chao3']],
+      ['草','青草','cao3',['chao3','zao3']],['虫','虫子','chong2',['cong2','chun2']],
+      ['四','四个','si4',['shi4','xi4']],['十','二十','shi2',['si2','chi2']],
+      ['三','三年','san1',['shan1','sang1']],['吃','好吃','chi1',['ci1','qi1']],
       ['次','一次','ci4',['chi4','si4']],['桌','桌子','zhuo1',['zuo1','zhou1']],
       ['坐','坐下','zuo4',['zhuo4','cuo4']],['说','说话','shuo1',['suo1','shou1']],
       ['春','春天','chun1',['cun1','chen1']],['村','村子','cun1',['chun1','cen1']],
@@ -182,32 +185,33 @@ const CATS = {
       ['爸','爸爸','ba4',['da4','pa4']],['大','大小','da4',['ba4','pa4']],
       ['怕','害怕','pa4',['ba4','da4']],['七','七个','qi1',['pi1','di1']],
       ['皮','皮球','pi2',['bi2','qi2']],['笔','铅笔','bi3',['di3','pi3']],
-      ['地','土地','di4',['bi4','pi4']],['北','北方','bei3',['dei3','pei3']],
+      ['地','土地','di4',['bi4','pi4']],['北','北京','bei3',['dei3','pei3']],
       ['跑','跑步','pao3',['bao3','dao3']],['刀','小刀','dao1',['bao1','pao1']],
       ['他','他们','ta1',['fa1','da1']],['发','发现','fa1',['ta1','fo1']],
-      ['马','马儿','ma3',['na3','ha3']],['拿','拿走','na2',['ma2','ha2']],
+      ['马','马儿','ma3',['na3','ha3']],['拿','拿起','na2',['ma2','ha2']],
       ['河','小河','he2',['ne2','ke2']],['猫','小猫','mao1',['nao1','hao1']],
-      ['肚','肚子','du4',['bu4','pu4']],['布','布娃娃','bu4',['du4','pu4']]
+      ['独','独自','du2',['bu2','pu2']],['布','瀑布','bu4',['du4','pu4']]
     ]},
   tone:{name:'声调',emoji:'🎵',desc:'ā  á  ǎ  à',types:['c2p','listen','listen','p2c'],
     tip:'一声平，二声扬，三声拐弯，四声降。标调口诀：有 a 不放过，没 a 找 o e，i u 并列标在后。',
     items:[
-      ['妈','妈妈','ma1',[]],['马','小马','ma3',[]],['鸡','小鸡','ji1',[]],['米','大米','mi3',[]],
-      ['汤','喝汤','tang1',[]],['躺','躺下','tang3',[]],['烫','很烫','tang4',[]],['牛','小牛','niu2',[]],
-      ['书','看书','shu1',[]],['熟','成熟','shu2',[]],['鼠','老鼠','shu3',[]],['树','大树','shu4',[]],
-      ['衣','衣服','yi1',[]],['姨','阿姨','yi2',[]],['椅','椅子','yi3',[]],['羊','小羊','yang2',[]],
-      ['花','开花','hua1',[]],['滑','滑冰','hua2',[]],['画','画画','hua4',[]],
-      ['猪','小猪','zhu1',[]],['竹','竹子','zhu2',[]],['主','主人','zhu3',[]],['住','住在','zhu4',[]]
+      ['妈','妈妈','ma1',[]],['马','小马','ma3',[]],['鸡','小鸡','ji1',[]],['米','玉米','mi3',[]],
+      ['诗','古诗','shi1',[]],['十','二十','shi2',[]],['始','开始','shi3',[]],['是','不是','shi4',[]],
+      ['七','七月','qi1',[]],['起','起来','qi3',[]],['气','天气','qi4',[]],['牛','小牛','niu2',[]],
+      ['书','看书','shu1',[]],['鼠','老鼠','shu3',[]],['树','大树','shu4',[]],['虫','虫子','chong2',[]],
+      ['衣','衣服','yi1',[]],['姨','阿姨','yi2',[]],['椅','椅子','yi3',[]],['羊','羊群','yang2',[]],
+      ['花','开花','hua1',[]],['滑','滑梯','hua2',[]],['画','画画','hua4',[]],
+      ['猪','野猪','zhu1',[]],['竹','竹子','zhu2',[]],['主','主人','zhu3',[]],['住','住在','zhu4',[]]
     ]},
   umlaut:{name:'ü 的规则',emoji:'🎩',desc:'ju qu xu yu  nü lü',types:['c2p','c2p','p2c'],
     tip:'小 ü 小 ü 真有礼，见了 j q x y，摘掉帽子还念 ü。但在 n、l 后面，ü 的帽子要戴好：nǚ lǜ。',
     items:[
       ['鱼','小鱼','yu2',['yv2','wu2']],['去','出去','qu4',['qv4','qiu4']],
-      ['举','举手','ju3',['jv3','jiu3']],['学','学习','xue2',['xve2','xie2']],
+      ['举','举起','ju3',['jv3','jiu3']],['学','学习','xue2',['xve2','xie2']],
       ['女','女孩','nv3',['nu3','niu3']],['绿','绿色','lv4',['lu4','liu4']],
       ['路','马路','lu4',['lv4','luo4']],['旅','旅行','lv3',['lu3','liu3']],
       ['雨','下雨','yu3',['yv3','wu3']],['军','军人','jun1',['jvn1','zhun1']],
-      ['月','月亮','yue4',['yve4','ye4']],['区','小区','qu1',['qv1','chu1']],
+      ['月','月亮','yue4',['yve4','ye4']],['许','许多','xu3',['xv3','xiu3']],
       ['玉','玉米','yu4',['yv4','wu4']],['句','句子','ju4',['jv4','jiu4']],
       ['云','白云','yun2',['yvn2','yong2']]
     ]},
@@ -229,32 +233,40 @@ const CATS = {
       ['熊','狗熊','xiong2',['xong2','xiang2']],['黄','黄色','huang2',['hang2','huan2']],
       ['窗','开窗','chuang1',['chang1','chuan1']],['家','回家','jia1',['ja1','jiao1']],
       ['瓜','西瓜','gua1',['ga1','guo1']],['快','很快','kuai4',['kai4','kua4']],
-      ['水','喝水','shui3',['shi3','shu3']],['桥','大桥','qiao2',['qao2','qiu2']],
+      ['水','喝水','shui3',['shi3','shu3']],['桥','小桥','qiao2',['qao2','qiu2']],
       ['鸟','小鸟','niao3',['nao3','niu3']],['小','大小','xiao3',['xao3','xiu3']],
       ['雪','下雪','xue3',['xe3','xie3']],['双','一双','shuang1',['shang1','shuan1']],
-      ['刷','刷牙','shua1',['sha1','shuo1']],['电','电灯','dian4',['dan4','die4']]
-    ]}
+      ['刷','刷牙','shua1',['sha1','shuo1']],['电','电话','dian4',['dan4','die4']]
+    ]},
+  tdrill:{name:'声调专练',emoji:'🎶',desc:'听音辨调 · 认声调 · 标调位置',types:['tlisten','tmark','tmark','tplace'],
+    tip:'一声平平高高走，二声从下往上扬，三声先降再扬起，四声从上往下降。标调口诀：有 a 不放过，没 a 找 o e，i u 并列标在后。',
+    items:[]}   // 题目用上面所有类型里的字，见 ITEMS.tdrill
 };
 /* 图片提示：不认识的字也能靠图猜出意思 */
 const EMO={
   '山':'⛰️','伤':'🩹','门':'🚪','梦':'💤','心':'❤️','星':'⭐','林':'🌲','铃':'🔔','根':'🌱','风':'🌬️',
-  '半':'🌗','船':'⛵','床':'🛏️','琴':'🎹','晴':'☀️','灯':'💡','盆':'🪴','朋':'🧑‍🤝‍🧑','新':'🎆',
-  '字':'✍️','纸':'📄','早':'🌅','找':'🔍','草':'🌿','炒':'🍳','四':'4️⃣','十':'🔟','三':'3️⃣','吃':'🍚',
+  '半':'🌗','船':'⛵','床':'🛏️','琴':'🎹','晴':'☀️','灯':'💡','盆':'🛁','朋':'🧑‍🤝‍🧑','新':'🎆',
+  '字':'✍️','纸':'📄','早':'🌅','找':'🔍','草':'🌿','四':'4️⃣','十':'🔟','三':'3️⃣','吃':'🍚',
   '坐':'🪑','说':'🗣️','春':'🌸','村':'🏡','声':'🔊',
   '爸':'👨','大':'🐘','怕':'😨','七':'7️⃣','皮':'⚽','笔':'✏️','地':'🌍','跑':'🏃','刀':'🔪',
-  '他':'👦','马':'🐴','拿':'🤲','河':'🏞️','猫':'🐱','布':'🧸',
-  '妈':'👩','汤':'🍲','躺':'🛌','烫':'🔥','书':'📖','鼠':'🐭','树':'🌳',
+  '他':'👦','马':'🐴','拿':'🤲','河':'🏞️','猫':'🐱','布':'🌊',
+  '妈':'👩','书':'📖','鼠':'🐭','树':'🌳',
   '衣':'👕','姨':'👩‍🦰','椅':'💺','花':'🌸','滑':'⛸️','画':'🎨','猪':'🐷','竹':'🎋','住':'🏘️',
   '鱼':'🐟','去':'🚶','举':'🙋','学':'🎒','女':'👧','绿':'🟩','路':'🛣️','旅':'🧳','雨':'🌧️','军':'💂',
-  '月':'🌙','区':'🏙️','云':'☁️',
+  '月':'🌙','云':'☁️',
   '屋':'🏠','五':'5️⃣','叶':'🍃','远':'🔭','音':'🎵','鹰':'🦅','日':'🌄','诗':'📜',
   '光':'🌞','熊':'🐻','黄':'🟨','窗':'🪟','家':'👨‍👩‍👧','瓜':'🍉','快':'🏎️','水':'💧','桥':'🌉','鸟':'🐦',
   '小':'🐜','雪':'❄️','双':'🧦','刷':'🪥','电':'⚡',
-  '房':'🏠','彩':'🌈','北':'🧭','鸡':'🐔','米':'🍚','牛':'🐮','羊':'🐑','玉':'🌽'
+  '房':'🏠','虫':'🐛','气':'⛅','是':'✅','彩':'🌈','北':'🧭','鸡':'🐔','米':'🍚','牛':'🐮','羊':'🐑','玉':'🌽'
 };
-const ORDER=['nasal','pingqiao','shape','tone','umlaut','whole','triple'];
+const ORDER=['nasal','pingqiao','shape','tone','tdrill','umlaut','whole','triple'];
 const ITEMS={};let ALL=[];
 ORDER.forEach(id=>{ITEMS[id]=CATS[id].items.map(([c,w,p,d])=>({c,w,p,d,e:EMO[c]||'',cat:id}));ALL=ALL.concat(ITEMS[id]);});
+/* 声调专练：全部题库的字（同一个字只要一次），只考声调 */
+ITEMS.tdrill=[...new Map(ALL.map(i=>[i.c,{...i,cat:'tdrill'}])).values()];ALL=ALL.concat(ITEMS.tdrill);
+const TONE_NAME=['','一声 ˉ','二声 ˊ','三声 ˇ','四声 ˋ'];
+/* 声调小课堂：mā má mǎ mà 的示范读音 */
+const TONE_DEMO=[{c:'妈',py:'mā'},{c:'麻',py:'má'},{c:'马',py:'mǎ'},{c:'骂',py:'mà'}];
 const LESSON_LEN=10, DAILY_GOAL=3;
 const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
 
@@ -419,7 +431,7 @@ function home(){
     <h1 class="title han">拼音大冒险</h1>
     <p class="sub">每天闯 ${DAILY_GOAL} 关，拼音变高手！</p>
     <div class="grid">${ORDER.map(id=>{const c=CATS[id];return `
-      <button class="cat" data-mode="${id}"><div class="emoji">${c.emoji}</div>
+      <button class="cat${id==='tdrill'?' wide':''}" data-mode="${id}"><div class="emoji">${c.emoji}</div>
       <div class="cname">${c.name}</div><div class="cdesc py">${c.desc}</div>
       ${starsHTML((prog[id]||{}).stars||0)}</button>`;}).join('')}
       <button class="cat" data-mode="mix"><div class="emoji">🎲</div><div class="cname">混合挑战</div>
@@ -479,7 +491,25 @@ function showDiag(){
 
 /* ================= 出题 ================= */
 let L=null;
+/* 声调专练出题。tlisten 听音辨调 / tmark 看字认调：选项固定按一二三四声排；
+   tplace 标调位置：把声调分别标在每个韵母字母上，只有一个对，不够 4 个就补别的声调 */
+function markAt(b,i,t){return (b.slice(0,i)+MARKS[b[i]][t-1]+b.slice(i+1)).replace(/v/g,'ü');}
+function makeToneQ(it,retry){
+  const b=base(it.p),t=+it.p.slice(-1);
+  const types=CATS.tdrill.types.filter(x=>x!=='tlisten'||soundOK());
+  let type=types[Math.floor(Math.random()*types.length)];
+  if(type==='tplace'){
+    const ans=py(it.p), opts=[...new Set([...b].map((ch,i)=>MARKS[ch]?markAt(b,i,t):null).filter(Boolean))];
+    if(opts.length>=2&&opts.includes(ans)){
+      for(const u of [1,2,3,4]) if(opts.length<4&&u!==t&&!opts.includes(py(b+u))) opts.push(py(b+u));
+      return {it,type,opts:shuffle(opts),ans,retry};
+    }
+    type='tmark';
+  }
+  return {it,type,opts:[1,2,3,4].map(u=>b+u),ans:it.p,retry};
+}
 function makeQ(it,retry=false){
+  if(it.cat==='tdrill') return makeToneQ(it,retry);
   const types=CATS[it.cat].types.filter(t=>t!=='listen'||soundOK());
   let type=types[Math.floor(Math.random()*types.length)];
   if(type==='p2c'&&hintMode){
@@ -553,10 +583,21 @@ function next(){
     <div class="prompt"><div class="hanbig han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div></div>`;
   else if(q.type==='listen') prompt=`<div class="qlabel">听一听，选出你听到的拼音</div>
     <div class="prompt"><button class="speaker" id="spk">🔊</button><div class="hint">点喇叭可以再听一遍</div>${IS_IOS&&!hasAudio?`<div class="mutetip small">${MUTE_TIP}</div>`:''}</div>`;
+  else if(q.type==='tlisten') prompt=`<div class="qlabel">听一听，是第几声？</div>
+    <div class="prompt"><button class="speaker" id="spk">🔊</button><div class="hint">点喇叭可以再听一遍</div></div>`;
+  else if(q.type==='tmark') prompt=`<div class="qlabel">${hintMode?'听一听，':''}这个字读第几声？</div>
+    <div class="prompt">${hintMode&&it.e?`<div class="pic">${it.e}</div>`:''}
+      <div class="hanmid han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div>
+      ${hintMode&&soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>`;
+  else if(q.type==='tplace') prompt=`<div class="qlabel">声调标在哪个字母上？</div>
+    <div class="prompt"><div class="pybig py">${base(it.p).replace(/v/g,'ü')}</div>
+      <div class="word"><b>${TONE_NAME[+it.p.slice(-1)]}</b>${hintMode?`　${it.e} <span class="han">${it.c}</span>`:''}</div>
+      ${hintMode&&soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>`;
   else prompt=`<div class="qlabel">${hintMode?'读一读拼音，选出对的图':'这个拼音是哪个字？'}</div>
     <div class="prompt"><div class="pybig py">${py(it.p)}</div></div>`;
   const isHan=q.type==='p2c', isPic=isHan&&hintMode;
-  const optHTML=o=>{if(!isPic)return isHan?o:py(o);
+  const optHTML=o=>{if(q.type==='tlisten'||q.type==='tmark')return `${py(o)}<div class="tn">${TONE_NAME[+o.slice(-1)]}</div>`;
+    if(!isPic)return isHan?o:py(o);
     const x=ITEMS[it.cat].find(i=>i.c===o);return `<div class="em">${x.e}</div><div class="emw han">${x.w}</div>`;};
   app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button>
       <div class="bar"><i style="width:${L.done/total*100}%"></i></div>
@@ -607,16 +648,19 @@ function answer(btn){
   }
   const praise=ok?PRAISE[Math.floor(Math.random()*PRAISE.length)]:'', combo=ok&&L.combo>=3?`连对 ${L.combo} 题！`:'';
   speak(ok?[cheer(praise),...(combo?[cheer(combo)]:[]),...sayItem(it)]:sayItem(it));
+  const toneCat=it.cat==='tone'||it.cat==='tdrill';
   const sheet=document.createElement('div');
   sheet.className='sheet '+(ok?'ok':'bad');
   sheet.innerHTML=`<div class="sheet-in">
     <div class="fb-title">${ok?'✅ '+praise+(combo?' '+combo:''):'❌ 正确答案是：'}</div>
-    <div class="fb-detail">${it.e?it.e+' ':''}<span class="han">${it.c}</span>　<span class="py" style="font-weight:700">${py(it.p)}</span>　<span class="han">${it.w}</span></div>
+    <div class="fb-detail">${it.e?it.e+' ':''}<span class="han">${it.c}</span>　<span class="py" style="font-weight:700">${py(it.p)}</span>${toneCat?`<span style="font-size:15px">（${TONE_NAME[+it.p.slice(-1)]}）</span>`:''}　<span class="han">${it.w}</span></div>
     ${ok?'':`<div class="tip">💡 ${CATS[it.cat].tip}</div>`}
+    ${!ok&&toneCat&&soundOK()?`<div class="tonedemo">🔈 声调小课堂：${TONE_DEMO.map((d,i)=>`<button class="spd py" data-td="${i}">${d.py}</button>`).join('')}</div>`:''}
     <div class="sheet-btns">${soundOK()?'<button class="iconbtn" id="again">🔊</button>':''}
     <button class="big ${ok?'green':'red'}" id="cont">继续</button></div></div>`;
   document.body.appendChild(sheet);
   const ag=document.getElementById('again'); if(ag) ag.onclick=()=>speak(sayItem(it));
+  sheet.querySelectorAll('[data-td]').forEach(b=>b.onclick=()=>speak({t:TONE_DEMO[+b.dataset.td].c}));
   document.getElementById('cont').onclick=()=>{sheet.remove();next();};
 }
 

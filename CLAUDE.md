@@ -20,9 +20,20 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   never rename/remove existing storage keys (the child would lose progress).
 
 ## How the game works
-- 7 categories + 混合挑战 + 错题本复习 + 综合考试:
+- 8 categories + 混合挑战 + 错题本复习 + 综合考试:
   `nasal` 前后鼻音, `pingqiao` 平舌翘舌, `shape` 形近字母 (b/d/p/q, m/n, f/t),
-  `tone` 声调, `umlaut` ü 的规则, `whole` 整体认读, `triple` 三拼音节.
+  `tone` 声调, `tdrill` 声调专练, `umlaut` ü 的规则, `whole` 整体认读,
+  `triple` 三拼音节.
+- **声调专练** (`tdrill`, wide yellow card): the child is weak at tones. Its
+  items are every bank character once (`ITEMS.tdrill`, built after the other
+  categories, `cat:'tdrill'` so mistakes/review stay tone questions). Types
+  via `makeToneQ()`: `tlisten` 听音辨调 (audio only), `tmark` 看字认调 (options
+  always ordered 一二三四声 with `TONE_NAME` labels), `tplace` 标调位置 (tone
+  mark placed on each vowel of the toneless syllable; falls back to `tmark`
+  for single-vowel syllables). Wrong answers in `tone`/`tdrill` show a
+  声调小课堂 row: mā má mǎ mà demo clips (`TONE_DEMO`, `say|妈/麻/马/骂`,
+  pinned to ma1–4; 麻/骂 are out of the reading list but only heard, never
+  shown).
 - Item format in `CATS[id].items`: `[汉字, 词语, 数字标调拼音, [易混干扰项]]`,
   e.g. `['山','山羊','shan1',['shang1','san1']]`. `v` = ü. `py()` converts
   `shan1` → `shān` using standard tone-mark placement rules.
@@ -33,6 +44,17 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   the PDF text layer drops some glyphs, so render the 识字表 pages and check
   visually). Removed as out of scope: 棒 寻 菜 杯 麻 骂 糖 亿 需 驴 户.
   Re-check any new character before adding it.
+  **Pinyin and words are also verified against the textbooks** (2026-11):
+  every item's pinyin equals the 识字表 annotation (extracted with
+  `pdftotext -bbox` on the 识字表 pages — 1a pp.120–122, 1b 123–125,
+  2a 116–119 — matching each pinyin word to the char below it; the pinyin
+  font stores tone vowels as capitals: QWAS=āáǎà ERDF=ēéěè TYGH=ōóǒò
+  UIJK=īíǐì OPLM=ūúǔù VC=ǚǜ), and every 词语 occurs in the books' body text
+  (`pdftotext -raw`). **Polyphone rule (user's):** avoid characters whose
+  other common reading the textbooks haven't taught; use a single-reading
+  character with the same pinyin instead (e.g. shou → 手, shu → 书). Removed
+  for this: 熟 (shóu), 肚 (dǔ); kept because the other reading is rare or
+  taught: 大 说 叶 家 绿 刷 (rare alt), 地 发 (both readings taught).
 - `EMO` maps 汉字 → emoji picture hint. Characters without an emoji are only
   used in 看字选拼音 questions in hint mode.
 - Question types: `c2p` 看字选拼音, `listen` 听音选拼音 (disabled if no zh voice),

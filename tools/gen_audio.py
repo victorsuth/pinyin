@@ -91,7 +91,8 @@ def jobs():
     # 听音连连看：声母、韵母的呼读音（用一个同音字合成，读音写死，也要过声调检查）
     for x in d["LETTERS"]:
         tries = [dict(text=f"{x['c']}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
-        js.append(dict(key=f"letter|{x['l']}", pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
+        # key 带上字和读音：换读音就换文件名，浏览器不会继续用缓存里的旧音频
+        js.append(dict(key=f"letter|{x['l']}|{x['c']}|{x['p']}",pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]

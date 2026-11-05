@@ -302,7 +302,7 @@ const LETTERS=[['b','玻','bo1'],['p','坡','po1'],['m','摸','mo1'],['f','佛',
   ['s','思','si1'],['y','衣','yi1'],['w','乌','wu1'],
   ['a','啊','a1'],['o','哦','o1'],['e','婀','e1'],['i','衣','yi1'],['u','乌','wu1'],['ü','淤','yu1'],['ai','埃','ai1'],
   ['ei','诶','ei1'],['ui','威','wei1'],['ao','凹','ao1'],['ou','欧','ou1'],['iu','优','you1'],['ie','耶','ye1'],['üe','约','yue1'],
-  ['er','儿','er2'],['an','安','an1'],['en','恩','en1'],['in','因','yin1'],['un','温','wen1'],['ün','晕','yun1'],
+  ['er','儿','er1'],['an','安','an1'],['en','恩','en1'],['in','因','yin1'],['un','温','wen1'],['ün','晕','yun1'],
   ['ang','肮','ang1'],['eng','鞥','eng1'],['ing','英','ying1'],['ong','嗡','ong1']].map(([l,c,p])=>({l,c,p}));
 const LETTER=Object.fromEntries(LETTERS.map(x=>[x.l,x]));
 /* 每轮 4 个，从容易混的一组里出 */
@@ -369,7 +369,7 @@ const CLIPS=new Set(((window.AUDIO_CLIPS||{})[VOICE])||[]);
 const hasAudio=CLIPS.size>0, soundOK=()=>hasAudio||voiceOK;
 function fnv(s){let h=0x811c9dc5;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36);}
 /* 文件名 = 内容的哈希，生成脚本用同样的算法 */
-const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:o.l?`letter|${o.l}`:`say|${o.t.replace(/\s+/g,'')}`;
+const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:o.l?`letter|${o.l}|${LETTER[o.l].c}|${LETTER[o.l].p}`:`say|${o.t.replace(/\s+/g,'')}`;
 function clipURL(o){const k=fnv(clipKey(o));return CLIPS.has(k)?`audio/${VOICE}/${k}.mp3`:null;}
 let player=null, playQ=[];
 const warmed=new Set();

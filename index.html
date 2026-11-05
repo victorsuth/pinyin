@@ -121,6 +121,33 @@ button{font-family:inherit;cursor:pointer}
 .stat span{font-size:13px;color:var(--muted)}
 .rbtns{display:flex;flex-direction:column;gap:12px;margin-top:10px}
 
+/* 学一学 */
+.lgroups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lgrp{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;
+  border-radius:14px;padding:12px 14px;font-size:20px;font-weight:700;color:var(--text)}
+.lgrp.next{border-color:var(--green);background:var(--green-bg)}
+.lgrp b{font-size:18px}
+.cat.hl:first-child{background:var(--green-bg);border-color:var(--green)}
+.learn{text-align:center;margin:26px 0 22px}
+.lbig{font-size:120px;font-weight:700;line-height:1.1;color:var(--blue-d)}
+.ltip{font-size:22px;font-weight:700;margin-top:8px}
+/* 写一写（可打印） */
+.wsheet{background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px}
+.wtitle{font-weight:800;font-size:16px;margin-bottom:6px}
+.wrow{padding:8px 0;border-top:1px dashed var(--line);break-inside:avoid}
+.whead{display:flex;align-items:baseline;gap:12px}
+.wl{font-size:34px;font-weight:700;color:var(--blue-d);min-width:56px}
+.wtip{font-size:15px;color:var(--text)}
+.wgrids{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.g4 line{stroke:#8cc8e8;stroke-width:1}
+.g4 line.base{stroke:#e57373}
+.g4 text{font-size:38px;font-family:Arial,Helvetica,sans-serif;fill:#cfcfcf}
+@media print{
+  .noprint,.sheet,.confetti{display:none!important}
+  html,body{background:#fff}
+  #app{padding:0;max-width:none}
+  .wsheet{border:none;padding:0}
+}
 /* 听音连连看 */
 .board{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:64px;margin-top:18px}
 .bcol{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
@@ -291,7 +318,9 @@ const ORDER=['nasal','pingqiao','shape','tone','tdrill','spell','umlaut','whole'
 /* 首页卡片，按学习顺序：认字母 → 声调 → 声母、韵母规则 → 拼读 → 综合。
    「声调」卡合并了 tone 和 tdrill 两类（出题见 startLesson），两类的星星、错题还是分开存 */
 const HOME=[
-  {id:'letters',emoji:'🔤',name:'听音连连看',desc:'听声音，认声母韵母',wide:1},
+  {id:'learn',emoji:'📖',name:'学一学',desc:'看图、听音、记口诀，一次学一组',wide:1,hl:1,stars:[]},
+  {id:'letters',emoji:'🔤',name:'听音连连看',desc:'只考学过的字母'},
+  {id:'write',emoji:'✍️',name:'写一写',desc:'打印连错的字母来写',stars:[]},
   {id:'tone',name:'声调',desc:'四声对比 · 听音辨调 · 标调位置',wide:1,hl:1,stars:['tone','tdrill']},
   {id:'shape'},{id:'pingqiao'},{id:'nasal'},{id:'umlaut'},{id:'spell'},{id:'triple'},{id:'whole'},
   {id:'mix',emoji:'🎲',name:'混合挑战',desc:'所有类型随机出题'}];
@@ -318,6 +347,59 @@ const LETTER_GROUPS=[['b','d','p','q'],['m','n','l','r'],['f','t','h','k'],['z',
   ['an','ang','en','eng'],['in','ing','un','ün'],['ie','üe','ei','ui'],['iu','ui','ou','ao'],['u','ü','i','e'],['a','o','e','er'],
   ['y','w','ü','u'],['ai','ei','ao','ou'],['ong','eng','ang','ing']];
 const LETTER_ROUNDS=3;
+/* 学一学：按课本顺序分组，每个字母配图、口诀。
+   [字母, 图, 口诀（显示）, 口诀（念出来：字母换成读音字，不然会被念成英文字母）] */
+const LEARN_GROUPS=[['b','p','m','f'],['d','t','n','l'],['g','k','h'],['j','q','x'],['zh','ch','sh','r'],['z','c','s'],['y','w'],
+  ['a','o','e'],['i','u','ü'],['ai','ei','ui'],['ao','ou','iu'],['ie','üe','er'],['an','en','in'],['un','ün'],['ang','eng','ing','ong']];
+const TIPS=Object.fromEntries([
+  ['b','📻','右下半圆 b，像个小广播','右下半圆，像个小广播，玻，玻，玻。'],
+  ['p','💦','右上半圆 p，像在泼水','右上半圆，像在泼水，坡，坡，坡。'],
+  ['m','🚪🚪','两个门洞 m','两个门洞，摸，摸，摸。'],
+  ['f','🦯','一根拐棍 f','一根拐棍，佛，佛，佛。'],
+  ['d','🐴','左下半圆 d，像马蹄','左下半圆，像马蹄，得，得，得。'],
+  ['t','☂️','像把小伞 t','像把小伞，特，特，特。'],
+  ['n','🚪','一个门洞 n','一个门洞，讷，讷，讷。'],
+  ['l','🥢','一根小棍 l','一根小棍，乐乐乐。'],
+  ['g','🕊️','像只小鸽子 g','像只小鸽子，哥，哥，哥。'],
+  ['k','🐸','像只小蝌蚪 k','像只小蝌蚪，科，科，科。'],
+  ['h','🪑','像把椅子 h','像把椅子，喝，喝，喝。'],
+  ['j','🐔','竖弯加点 j，像小鸡','竖弯加点，像小鸡，鸡，鸡，鸡。'],
+  ['q','🎈','左上半圆 q，像气球','左上半圆，像个气球，七，七，七。'],
+  ['x','🍉','像个叉 x，切西瓜','像个叉，切西瓜，西，西，西。'],
+  ['zh','🧶','z 加 h，翘起舌头','翘起舌头，知，知，知。'],
+  ['ch','🍚','c 加 h，翘起舌头','翘起舌头，吃，吃，吃。'],
+  ['sh','🦁','s 加 h，翘起舌头','翘起舌头，诗，诗，诗。'],
+  ['r','🌱','像棵小苗 r','像棵小苗，日，日，日。'],
+  ['z','✍️','像个 2 字 z','像个二字，资，资，资。'],
+  ['c','🌙','像个半圆 c','像个半圆，呲，呲，呲。'],
+  ['s','🐛','像条小蚕 s','像条小蚕，思，思，思。'],
+  ['y','🌳','像个树杈 y','像个树杈，衣，衣，衣。'],
+  ['w','🏠','像个屋顶 w','像个屋顶，乌，乌，乌。'],
+  ['a','😮','张大嘴巴 a','张大嘴巴，啊，啊，啊。'],
+  ['o','🐓','圆圆嘴巴 o，公鸡喔喔叫','圆圆嘴巴，哦，哦，哦。'],
+  ['e','🦢','扁扁嘴巴 e，像白鹅','扁扁嘴巴，婀，婀，婀。'],
+  ['i','👕','牙齿对齐 i','牙齿对齐，衣，衣，衣。'],
+  ['u','🐦','嘴巴突出 u','嘴巴突出，乌，乌，乌。'],
+  ['ü','🐟','撮圆嘴巴 ü，小鱼吐泡泡','撮圆嘴巴吹口哨，淤，淤，淤。'],
+  ['ai','🔗','a 和 i 合起来','啊和衣合起来，埃，埃，埃。'],
+  ['ei','🔗','e 和 i 合起来','婀和衣合起来，诶，诶，诶。'],
+  ['ui','🔗','u 和 i 合起来','乌和衣合起来，威，威，威。'],
+  ['ao','🔗','a 和 o 合起来','啊和哦合起来，凹，凹，凹。'],
+  ['ou','🔗','o 和 u 合起来','哦和乌合起来，欧，欧，欧。'],
+  ['iu','🔗','i 和 u 合起来','衣和乌合起来，优，优，优。'],
+  ['ie','🔗','i 和 e 合起来','衣和婀合起来，耶，耶，耶。'],
+  ['üe','🔗','ü 和 e 合起来','淤和婀合起来，约，约，约。'],
+  ['er','👅','卷起舌头 er','卷起舌头，儿，儿，儿。'],
+  ['an','👃','前鼻音 an：舌尖顶住上牙床','前鼻音，舌尖顶住上牙床，安，安，安。'],
+  ['en','👃','前鼻音 en：舌尖顶住上牙床','前鼻音，舌尖顶住上牙床，恩，恩，恩。'],
+  ['in','👃','前鼻音 in：舌尖顶住上牙床','前鼻音，舌尖顶住上牙床，因，因，因。'],
+  ['un','👃','前鼻音 un：舌尖顶住上牙床','前鼻音，舌尖顶住上牙床，温，温，温。'],
+  ['ün','👃','前鼻音 ün：舌尖顶住上牙床','前鼻音，舌尖顶住上牙床，晕，晕，晕。'],
+  ['ang','👃','后鼻音 ang：舌头往后缩','后鼻音，舌头往后缩，昂，昂，昂。'],
+  ['eng','👃','后鼻音 eng：舌头往后缩','后鼻音，舌头往后缩，鞥，鞥，鞥。'],
+  ['ing','👃','后鼻音 ing：舌头往后缩','后鼻音，舌头往后缩，英，英，英。'],
+  ['ong','👃','后鼻音 ong：舌头往后缩','后鼻音，舌头往后缩，嗡，嗡，嗡。']
+].map(([l,e,tip,say])=>[l,{e,tip,say}]));
 const LESSON_LEN=10, DAILY_GOAL=3;
 const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
 
@@ -355,6 +437,9 @@ function findItem(k){const [cat,c]=k.split('|');return (ITEMS[cat]||[]).find(i=>
 let wrongHist=store.get('wrongHist',{}), exams=store.get('exams',[]);
 /* letterHist：听音连连看里每个字母连错过几次，只增不减，用来多出错过的那组 */
 let letterHist=store.get('letterHist',{});
+/* learned：学一学里学过的组 {组号: 日期}；连连看只出学过的字母 */
+let learned=store.get('learned',{});
+const learnedLetters=()=>LEARN_GROUPS.flatMap((g,i)=>learned[i]?g:[]);
 function bumpMistake(it,d){const k=it.cat+'|'+it.c;mistakes[k]=Math.max(0,(mistakes[k]||0)+d);if(!mistakes[k])delete mistakes[k];store.set('mistakes',mistakes);
   if(d>0){wrongHist[k]=(wrongHist[k]||0)+d;store.set('wrongHist',wrongHist);}}
 
@@ -484,10 +569,10 @@ function home(){
   app.innerHTML=`${topbar()}
     <h1 class="title han">拼音大冒险</h1>
     <p class="sub">每天闯 ${DAILY_GOAL} 关，拼音变高手！</p>
-    <div class="grid">${HOME.map(h=>{const c={...CATS[h.id],...h},st=Math.max(...(h.stars||[h.id]).map(k=>(prog[k]||{}).stars||0));return `
+    <div class="grid">${HOME.map(h=>{const c={...CATS[h.id],...h},ks=h.stars||[h.id],st=Math.max(0,...ks.map(k=>(prog[k]||{}).stars||0));return `
       <button class="cat${h.wide?' wide':''}${h.hl?' hl':''}" data-mode="${h.id}"><div class="emoji">${c.emoji}</div>
       <div class="cname">${c.name}</div><div class="cdesc py">${c.desc}</div>
-      ${starsHTML(st)}</button>`;}).join('')}
+      ${h.id==='learn'?`<div class="cdesc" style="font-weight:700;color:var(--green-d)">已学 ${Object.keys(learned).length} / ${LEARN_GROUPS.length} 组</div>`:ks.length?starsHTML(st):''}</button>`;}).join('')}
     </div>
     <div class="row2" style="grid-template-columns:1fr">
       <button class="big blue" data-mode="exam">📝 综合考试（${EXAM_LEN} 题）
@@ -634,6 +719,8 @@ function buildExam(){
 function startLesson(mode){
   unlockAudio(); unlockSpeech();
   if(mode==='letters') return startLetters();
+  if(mode==='learn') return showLearn();
+  if(mode==='write') return showWrite();
   let pool;
   if(mode==='exam') pool=buildExam();
   else if(mode==='review') pool=mistakeKeys().map(findItem).filter(Boolean).slice(0,LESSON_LEN);
@@ -710,17 +797,62 @@ function next(){
   const spk=document.getElementById('spk');
   if(spk){spk.onclick=()=>speak(sayItem(it));speak(sayItem(it));}
 }
+/* ================= 学一学 =================
+   一次学一组：每个字母看图、听读音和口诀，学完马上用这组字母玩两轮连连看 */
+function showLearn(){
+  stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
+  screen='learn';
+  const nextG=LEARN_GROUPS.findIndex((g,i)=>!learned[i]);
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">📖 学一学</div></div>
+    <p class="hint" style="margin:14px 0">一次学一组，学完马上连一连。✅ 是学过的，👉 是下一组。</p>
+    <div class="lgroups">${LEARN_GROUPS.map((g,i)=>`<button class="lgrp${i===nextG?' next':''}" data-g="${i}">
+      <span class="py">${g.join(' ')}</span><b>${learned[i]?'✅':i===nextG?'👉':''}</b></button>`).join('')}</div>`;
+  document.getElementById('quit').onclick=home;
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{L={mode:'learn',gi:+b.dataset.g,li:0};learnCard();});
+}
+function learnCard(){
+  unlockAudio(); stopSpeech(); screen='learn';
+  const g=LEARN_GROUPS[L.gi], l=g[L.li], t=TIPS[l], last=L.li===g.length-1;
+  preload(g.flatMap(x=>[{l:x},{t:TIPS[x].say}]));
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button>
+      <div class="bar"><i style="width:${(L.li+1)/g.length*100}%"></i></div><div class="combo"></div></div>
+    <div class="learn"><div class="pic">${t.e}</div><div class="lbig py">${l}</div><div class="ltip">${t.tip}</div>
+      <button class="minispk" id="spk">🔊 再听一遍</button></div>
+    <div class="rbtns">${L.li?'<button class="big gray" id="prev">⬅ 上一个</button>':''}
+      <button class="big green" id="nxt">${last?'学完了，去连一连 ➜':'下一个 ➜'}</button></div>`;
+  const say=()=>speak([{l},{t:t.say}]);   // 读音 + 口诀
+  document.getElementById('spk').onclick=say; say();
+  document.getElementById('quit').onclick=showLearn;
+  const pv=document.getElementById('prev'); if(pv) pv.onclick=()=>{L.li--;learnCard();};
+  document.getElementById('nxt').onclick=()=>{if(last)practiceGroup(L.gi);else{L.li++;learnCard();}};
+}
+/* 学完一组：记下来，用这组字母连两轮；不够 4 个就从前面学过的组里补 */
+function practiceGroup(gi){
+  learned[gi]=ymd(new Date()); store.set('learned',learned);
+  const ls=LEARN_GROUPS[gi].slice();
+  for(let k=gi-1;k>=0&&ls.length<4;k--) for(const x of shuffle(LEARN_GROUPS[k].slice())) if(ls.length<4) ls.push(x);
+  startLetters([ls,ls.slice()]);
+}
+
 /* ================= 听音连连看 =================
-   左边喇叭（点了听声音），右边字母，点喇叭再点字母连起来。一关 3 轮，每轮 4 对 */
-function startLetters(){
-  const w=g=>1+g.reduce((s,l)=>s+(letterHist[l]||0),0);   // 错得多的组多出
-  const gs=[],left=LETTER_GROUPS.slice();
-  while(gs.length<LETTER_ROUNDS&&left.length){
-    let r=Math.random()*left.reduce((s,g)=>s+w(g),0),i=0;
-    while(i<left.length-1&&(r-=w(left[i]))>=0) i++;
-    gs.push(left.splice(i,1)[0]);
+   左边喇叭（点了听声音），右边字母，点喇叭再点字母连起来。一关 3 轮，每轮 3～4 对，
+   只出学过的字母；每轮最后一对自动连上、不计分（免得靠排除法白拿） */
+function startLetters(rounds){
+  let gs=rounds;
+  if(!gs){
+    const known=new Set(learnedLetters());
+    if(known.size<4) return needLearn();
+    const w=g=>1+g.reduce((s,l)=>s+(letterHist[l]||0),0);   // 错得多的组多出
+    const left=LETTER_GROUPS.map(g=>g.filter(l=>known.has(l))).filter(g=>g.length>=3);
+    gs=[];
+    while(gs.length<LETTER_ROUNDS&&left.length){
+      let r=Math.random()*left.reduce((s,g)=>s+w(g),0),i=0;
+      while(i<left.length-1&&(r-=w(left[i]))>=0) i++;
+      gs.push(left.splice(i,1)[0]);
+    }
+    while(gs.length<LETTER_ROUNDS) gs.push(shuffle([...known]).slice(0,4));  // 学得还少，凑不出易混组
   }
-  L={mode:'letters',rounds:gs,ri:0,done:0,firstTotal:gs.length*4,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
+  L={mode:'letters',rounds:gs,ri:0,done:0,firstTotal:gs.reduce((s,g)=>s+g.length-1,0),firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
   preload(PRAISE.map(cheer));
   letterRound();
 }
@@ -756,7 +888,9 @@ function pickLetter(b){
     sfx('bad'); L.combo=0; lr.missed.add(lr.sel);
     letterHist[lr.sel]=(letterHist[lr.sel]||0)+1; store.set('letterHist',letterHist);
     b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
-    hint.textContent='不对哦，再听一听';
+    // 连错：马上再听一遍，并给出这个音的口诀
+    speak({l:lr.sel});
+    hint.innerHTML=`不对哦，再听一遍。💡 ${TIPS[lr.sel].e} ${TIPS[lr.sel].tip}`;
     document.getElementById('lcombo').textContent='';
     return;
   }
@@ -764,14 +898,20 @@ function pickLetter(b){
   sfx('ok'); lr.matched.add(r); L.done++; L.gained+=10;
   L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo);
   if(!lr.missed.has(r)) L.firstCorrect++;
-  [spk,b].forEach(x=>{x.classList.remove('sel','bad');x.classList.add('done');});
-  const bd=document.getElementById('board').getBoundingClientRect(), a=spk.getBoundingClientRect(), c=b.getBoundingClientRect();
-  document.getElementById('lines').insertAdjacentHTML('beforeend',
-    `<line x1="${a.right-bd.left}" y1="${a.top+a.height/2-bd.top}" x2="${c.left-bd.left}" y2="${c.top+c.height/2-bd.top}"/>`);
+  const line=(s,t)=>{
+    [s,t].forEach(x=>{x.classList.remove('sel','bad');x.classList.add('done');});
+    const bd=document.getElementById('board').getBoundingClientRect(), a=s.getBoundingClientRect(), c=t.getBoundingClientRect();
+    document.getElementById('lines').insertAdjacentHTML('beforeend',
+      `<line x1="${a.right-bd.left}" y1="${a.top+a.height/2-bd.top}" x2="${c.left-bd.left}" y2="${c.top+c.height/2-bd.top}"/>`);
+  };
+  line(spk,b);
   lr.sel=null; hint.textContent='连对了！接着点下一个喇叭';
   document.getElementById('lbar').style.width=L.done/L.firstTotal*100+'%';
   document.getElementById('lcombo').textContent=L.combo>=2?`🔥×${L.combo}`:'';
-  if(lr.matched.size<4) return;
+  if(lr.matched.size<lr.left.length-1) return;
+  // 只剩最后一对：自动连上，不计分
+  const rest=lr.left.find(x=>!lr.matched.has(x)); lr.matched.add(rest);
+  line(app.querySelector(`[data-l="${rest}"]`),app.querySelector(`[data-r="${rest}"]`));
   // 这一组连完：夸一句，点继续进下一组（声音要在点按里开始，所以不自动跳）
   const praise=PRAISE[Math.floor(Math.random()*PRAISE.length)];
   speak(cheer(praise));
@@ -781,6 +921,40 @@ function pickLetter(b){
     <div class="sheet-btns"><button class="big green" id="cont">${last?'看看成绩':'下一组 ➜'}</button></div></div>`;
   document.body.appendChild(sheet);
   document.getElementById('cont').onclick=()=>{sheet.remove();if(last)finish();else{L.ri++;letterRound();}};
+}
+/* ================= 写一写 =================
+   按连连看里连错的次数，列出最该练的字母，配口诀和四线格（前三格描红、后三格自己写），打印出来写 */
+function grid4(l,trace){
+  const w=34+l.length*26;   // 第三条线是基线（红色），字母的小写部分占中间一格
+  return `<svg class="g4" viewBox="0 0 ${w} 80" width="${w}" height="80">
+    ${[10,30,50,70].map((y,i)=>`<line x1="0" x2="${w}" y1="${y}" y2="${y}"${i===2?' class="base"':''}/>`).join('')}
+    ${trace?`<text x="${w/2}" y="50" text-anchor="middle">${l}</text>`:''}</svg>`;
+}
+function showWrite(gi){
+  stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
+  screen='write';
+  const missed=Object.entries(letterHist).filter(([l,n])=>n>0&&TIPS[l]).sort((a,b)=>b[1]-a[1]).map(([l])=>l);
+  const ls=gi!=null?LEARN_GROUPS[gi]:missed.slice(0,6);
+  app.innerHTML=`<div class="lhead noprint"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">✍️ 写一写</div></div>
+    <p class="hint noprint" style="margin:14px 0">${gi!=null?'这一组的字母，边写边读出来':missed.length?'连连看里最常连错的字母，边写边读出来':'还没有连错的字母，选一组来写吧'}</p>
+    ${ls.length?`<div class="wsheet"><div class="wtitle">✍️ 拼音书写练习　${ymd(new Date())}</div>
+      ${ls.map(l=>`<div class="wrow"><div class="whead"><span class="py wl">${l}</span><span class="wtip">${TIPS[l].e} ${TIPS[l].tip}</span></div>
+        <div class="wgrids">${[1,1,1,0,0,0].map(t=>grid4(l,t)).join('')}</div></div>`).join('')}</div>
+      <button class="big blue noprint" id="print" style="width:100%;margin-top:14px">🖨️ 打印</button>`:''}
+    <div class="tlabel noprint" style="margin-top:18px">选一组来写：</div>
+    <div class="lgroups noprint">${LEARN_GROUPS.map((g,i)=>`<button class="lgrp" data-g="${i}"><span class="py">${g.join(' ')}</span></button>`).join('')}</div>`;
+  document.getElementById('quit').onclick=home;
+  const pr=document.getElementById('print'); if(pr) pr.onclick=()=>window.print();
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>showWrite(+b.dataset.g));
+}
+function needLearn(){
+  const sh=document.createElement('div');sh.className='sheet ok';
+  sh.innerHTML=`<div class="sheet-in"><div class="fb-title">📖 先学一学吧</div>
+    <div class="fb-detail" style="font-size:16px">连连看只考学过的字母，至少要学过 4 个。</div>
+    <div class="sheet-btns"><button class="big gray" id="nlback">返回</button><button class="big green" id="nlgo">去学一学</button></div></div>`;
+  document.body.appendChild(sh);
+  document.getElementById('nlback').onclick=()=>sh.remove();
+  document.getElementById('nlgo').onclick=()=>{sh.remove();showLearn();};
 }
 function askQuit(){
   if(document.querySelector('.sheet')) document.querySelectorAll('.sheet').forEach(x=>x.remove());

@@ -21,8 +21,25 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 
 ## How the game works
 - **Home screen** follows `HOME` (learning order chosen by the parent):
-  听音连连看 (wide) → 声调 (wide, yellow) → 形近字母, 平舌翘舌 → 前后鼻音,
-  ü 的规则 → 拼一拼, 三拼音节 → 整体认读, 混合挑战. The 声调 card merges the
+  学一学 (wide, green) → 听音连连看, 写一写 → 声调 (wide, yellow) → 形近字母,
+  平舌翘舌 → 前后鼻音, ü 的规则 → 拼一拼, 三拼音节 → 整体认读, 混合挑战.
+- **Learn → practise → write** (the child couldn't yet map symbols to sounds,
+  and the parent reinforces offline by writing):
+  - 学一学 (`showLearn()`/`learnCard()`/`practiceGroup()`): 15 groups in
+    textbook order (`LEARN_GROUPS`); each letter card shows `TIPS[l]` (emoji +
+    口诀) and plays the letter clip then the spoken tip (`TIPS[l].say`, where
+    letters are replaced by their synthesis chars — Latin letters would be read
+    as English). Finishing a group stores it in the new key `learned` and runs
+    two 连连看 rounds with that group (padded to 4 from earlier groups).
+  - 听音连连看 only uses learned letters (needs ≥4, else `needLearn()` sheet);
+    rounds of 3–4; the last pair auto-connects and isn't scored
+    (`firstTotal` = Σ(size−1)); a wrong pick replays the target sound and shows
+    its tip.
+  - 写一写 (`showWrite()`): top 6 letters by `letterHist`, or any learn group,
+    each with tip and six 四线格 (`grid4()`, 3 traced + 3 blank, red baseline);
+    🖨️ calls `window.print()`, `@media print` hides everything but the sheet.
+  - Tip audio quirks: 「乐，乐，乐」 was read lēi → l's tip says 「乐乐乐」;
+    ong's tip clip is a hand-picked take (ASR heard 「ong ong ong」). The 声调 card merges the
   `tone` and `tdrill` categories: `startLesson('tone')` takes half its
   questions from the 四声对比 items and half from 声调专练; stars shown are the
   max of both; `tdrill` has no card of its own but stays in `ORDER` (exam

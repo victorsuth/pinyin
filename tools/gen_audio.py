@@ -64,7 +64,7 @@ const el={innerHTML:'',querySelectorAll:()=>[],onclick:null,hidden:false,textCon
 global.document={getElementById:()=>el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>({...el,remove(){}}),body:{appendChild(){}}};
 global.window={};
 """
-    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO,LETTERS}));"
+    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO,LETTERS,TIPS:Object.values(TIPS).map(t=>t.say)}));"
     out = subprocess.run(["node", "-e", stub + js + tail], capture_output=True, text=True, check=True).stdout
     return json.loads(out.strip().splitlines()[-1])
 
@@ -98,6 +98,10 @@ def jobs():
         tries = [dict(text=f"{x['c']}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
         # key 带上字和读音：换读音就换文件名，浏览器不会继续用缓存里的旧音频
         js.append(dict(key=f"letter|{x['l']}|{x['c']}|{x['p']}",pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
+    # 学一学的口诀：里面的读音字（佛、得、乐、儿、昂…）和字母读音一样写死成一声
+    for t in d["TIPS"]:
+        pron = sorted({f"{x['c']}/({x['p']})" for x in d["LETTERS"] if x["c"] in t})
+        js.append(dict(key=f"say|{t}", text=t, pron=pron or None, speed=0.85, emotion=None))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]

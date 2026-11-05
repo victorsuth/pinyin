@@ -41,7 +41,8 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
     each with tip and two full-width 四线格 rows (`grid4(l,traced)`: units are
     mm — 180 wide = A4 writable width with `@page` 15 mm margins; lines 4 mm
     apart (12 mm total, the common 拼音本 size — there is no official
-    standard); 6 equal slots so every letter gets the same width; first row
+    standard); 6 equal framed boxes per row with 4 mm gaps (`G4_GAP`, the parent
+    asked for boxes so the child sees the margins) so every letter gets the same width; first row
     3 traced + 3 blank, second row blank; red baseline). 🖨️ calls
     `window.print()`, `@media print` hides everything but the sheet.
 - The 声调 card merges the

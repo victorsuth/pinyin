@@ -142,6 +142,7 @@ button{font-family:inherit;cursor:pointer}
 .g4{display:block;width:100%;height:auto;margin:2px 0}
 .g4 line{stroke:#8cc8e8;stroke-width:.25}
 .g4 line.base{stroke:#e57373}
+.g4 rect{fill:none;stroke:#5fb3e0;stroke-width:.35}
 .g4 text{font-size:7.7px;font-family:Arial,Helvetica,sans-serif;fill:#cfcfcf}   /* 小写部分正好占中间 4mm */
 @page{size:A4;margin:15mm}
 @media print{
@@ -957,15 +958,17 @@ function pickLetter(b){
 }
 /* ================= 写一写 =================
    按连连看里连错的次数，列出最该练的字母，配口诀和四线格（前三格描红、后三格自己写），打印出来写 */
-/* 一行四线格，按常见拼音本：四条线间距 4mm（整格高 12mm），整行通长；
+/* 一行四线格，按常见拼音本：四条线间距 4mm（整格高 12mm）。
    单位按毫米画，A4 打印可写区约 180mm 宽，正好 1 单位 = 1mm。
-   分 6 个等宽的位置（前 3 个描红），不管 c 还是 zh 宽度都一样；第三条线是基线（红色） */
-const G4_W=180, G4_SLOTS=6;
+   一行 6 个等宽的方框（前 3 个描红），框之间空 4mm，不管 c 还是 zh 宽度都一样，
+   框起来孩子能看清上下左右的边界；第三条线是基线（红色） */
+const G4_W=180, G4_SLOTS=6, G4_GAP=4;
 function grid4(l,traced){
-  const sw=G4_W/G4_SLOTS;
+  const cw=(G4_W-G4_GAP*(G4_SLOTS-1))/G4_SLOTS;
   return `<svg class="g4" viewBox="0 0 ${G4_W} 16" preserveAspectRatio="xMinYMin meet">
-    ${[2,6,10,14].map((y,i)=>`<line x1="0" x2="${G4_W}" y1="${y}" y2="${y}"${i===2?' class="base"':''}/>`).join('')}
-    ${[...Array(traced)].map((_,k)=>`<text x="${sw*k+sw/2}" y="10" text-anchor="middle">${l}</text>`).join('')}</svg>`;
+    ${[...Array(G4_SLOTS)].map((_,k)=>{const x=k*(cw+G4_GAP);return `<rect x="${x}" y="2" width="${cw}" height="12"/>
+      <line x1="${x}" x2="${x+cw}" y1="6" y2="6"/><line x1="${x}" x2="${x+cw}" y1="10" y2="10" class="base"/>
+      ${k<traced?`<text x="${x+cw/2}" y="10" text-anchor="middle">${l}</text>`:''}`;}).join('')}</svg>`;
 }
 function showWrite(gi){
   stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());

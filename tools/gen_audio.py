@@ -35,7 +35,8 @@ SAY_AS = {}
 # 家长试听后手工选定的音频：--recheck-tones 也不重做（自动检查会误判它们）。
 # ai：埃 平调那版，识别器听成英文 "I"；er：儿 平调那版，识别成 "R"；
 # ang：单念总念成「洋洋」，这版是念「肮脏」后剪出来的第一个音节
-HAND_PICKED = {"letter|ai|埃|ai1", "letter|er|儿|er1", "letter|ang|昂|ang1", "letter|n|哪|ne1", "letter|l|了|le1", "letter|ong|公|ong1"}
+HAND_PICKED = {"letter|ai|埃|ai1", "letter|er|儿|er1", "letter|ang|昂|ang1", "letter|n|哪|ne1", "letter|l|了|le1", "letter|ong|公|ong1",
+               "syl|欲|yu4"}  # 欲 单念声调太平，用同音的「玉」合成的那版
 
 ITEM_SPEED, SAY_SPEED = 0.8, 1.0
 
@@ -64,7 +65,7 @@ const el={innerHTML:'',querySelectorAll:()=>[],onclick:null,hidden:false,textCon
 global.document={getElementById:()=>el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>({...el,remove(){}}),body:{appendChild(){}}};
 global.window={};
 """
-    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO,LETTERS,TIPS:Object.values(TIPS).map(t=>t.say)}));"
+    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO,LETTERS,TIPS:Object.values(TIPS).map(t=>t.say),PASSAGES,WHOLE_SYL}));"
     out = subprocess.run(["node", "-e", stub + js + tail], capture_output=True, text=True, check=True).stdout
     return json.loads(out.strip().splitlines()[-1])
 
@@ -99,6 +100,19 @@ def jobs():
         # key 带上字和读音：换读音就换文件名，浏览器不会继续用缓存里的旧音频
         js.append(dict(key=f"letter|{x['l']}|{x['c']}|{x['p']}",pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
     # 学一学的口诀：里面的读音字（佛、得、乐、儿、昂…）和字母读音一样写死成一声
+    # 整体认读课文：每个整体认读音节单念一遍（点到时播，要过声调和读音检查），
+    # 再整篇朗读一遍；读音都照课本（课本标的拼音写死，比如「一层楼」的 yì）
+    syl_seen = set()
+    for P in d["PASSAGES"]:
+        han = [c for c in P["text"] if "\u4e00" <= c <= "\u9fff"]
+        ps = P["py"].split()
+        for c, p in zip(han, ps):
+            if p[:-1] in d["WHOLE_SYL"] and (c, p) not in syl_seen:
+                syl_seen.add((c, p))
+                tries = [dict(text=f"{c}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
+                js.append(dict(key=f"syl|{c}|{p}", pron=[f"{c}/({p})"], tone=int(p[-1]), syl=p[:-1], seg="first", tries=tries, **tries[0]))
+        js.append(dict(key=f"say|{P['text']}", text=P["text"], pron=[f"{c}/({p})" for c, p in dict(zip(han, ps)).items()],
+                       speed=0.8, emotion=None))
     for t in dict.fromkeys(d["TIPS"]):  # 几个鼻韵母的口诀一样，只生成一次
         pron = sorted({f"{x['c']}/({x['p']})" for x in d["LETTERS"] if x["c"] in t})
         js.append(dict(key=f"say|{t}", text=t, pron=pron or None, speed=0.85, emotion=None))

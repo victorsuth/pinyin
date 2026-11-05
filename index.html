@@ -131,6 +131,18 @@ button{font-family:inherit;cursor:pointer}
 .learn{text-align:center;margin:26px 0 22px}
 .lbig{font-size:120px;font-weight:700;line-height:1.1;color:var(--blue-d)}
 .ltip{font-size:22px;font-weight:700;margin-top:8px}
+/* 整体认读：课文 */
+.ptitle{text-align:center;font-size:30px;font-weight:700;margin:16px 0 2px}
+.passage{text-align:center;line-height:1;margin:16px 0 10px}
+.pc{display:inline-flex;flex-direction:column;align-items:center;background:none;border:2px solid transparent;border-radius:10px;
+  padding:3px 1px;margin:2px 0;min-width:42px;vertical-align:bottom}
+.pc .pp{font-size:14px;color:var(--muted);font-weight:700;height:17px;letter-spacing:0}
+.pc .ph{font-size:28px;color:var(--text);margin-top:3px}
+.pc.ok{background:var(--green-bg);border-color:var(--green)}
+.pc.ok .pp,.pc.ok .ph{color:var(--green-d)}
+.pc.bad{background:var(--red-bg);border-color:var(--red);animation:shake .35s}
+.pz{font-size:26px;color:var(--muted);vertical-align:bottom;display:inline-block;padding-bottom:8px}
+.wlist16{text-align:center;font-size:13px;color:var(--muted);margin-top:8px;word-spacing:4px}
 /* 写一写（可打印） */
 .wsheet{background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px}
 .wtitle{font-weight:800;font-size:16px;margin-bottom:6px}
@@ -404,6 +416,24 @@ const TIPS=Object.fromEntries([
   ['ing','👃','后鼻音 ing：舌头往后缩','后鼻音，舌头往后缩。'],
   ['ong','👃','后鼻音 ong：舌头往后缩','后鼻音，舌头往后缩。']
 ].map(([l,e,tip,say])=>[l,{e,tip,say}]));
+/* 整体认读：在课文里找整体认读音节。课文都是一上/一下/二上课本里的原文，
+   拼音照课本页面上标的（比如「更上一层楼」课本标 yì，不是 yī） */
+const WHOLE_SYL='zhi chi shi ri zi ci si yi wu yu ye yue yuan yin yun ying'.split(' ');
+const PASSAGES=[
+  {t:'江南',b:'一年级上册',a:'汉乐府',text:'江南可采莲，莲叶何田田。鱼戏莲叶间。鱼戏莲叶东，鱼戏莲叶西，鱼戏莲叶南，鱼戏莲叶北。',
+    py:'jiang1 nan2 ke3 cai3 lian2 lian2 ye4 he2 tian2 tian2 yu2 xi4 lian2 ye4 jian1 yu2 xi4 lian2 ye4 dong1 yu2 xi4 lian2 ye4 xi1 yu2 xi4 lian2 ye4 nan2 yu2 xi4 lian2 ye4 bei3'},
+  {t:'画',b:'一年级上册',a:'',text:'远看山有色，近听水无声。春去花还在，人来鸟不惊。',
+    py:'yuan3 kan4 shan1 you3 se4 jin4 ting1 shui3 wu2 sheng1 chun1 qu4 hua1 hai2 zai4 ren2 lai2 niao3 bu4 jing1'},
+  {t:'悯农',b:'一年级上册',a:'[唐] 李绅',text:'锄禾日当午，汗滴禾下土。谁知盘中餐，粒粒皆辛苦。',
+    py:'chu2 he2 ri4 dang1 wu3 han4 di1 he2 xia4 tu3 shui2 zhi1 pan2 zhong1 can1 li4 li4 jie1 xin1 ku3'},
+  {t:'静夜思',b:'一年级下册',a:'[唐] 李白',text:'床前明月光，疑是地上霜。举头望明月，低头思故乡。',
+    py:'chuang2 qian2 ming2 yue4 guang1 yi2 shi4 di4 shang4 shuang1 ju3 tou2 wang4 ming2 yue4 di1 tou2 si1 gu4 xiang1'},
+  {t:'春晓',b:'一年级下册',a:'[唐] 孟浩然',text:'春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。',
+    py:'chun1 mian2 bu4 jue2 xiao3 chu4 chu4 wen2 ti2 niao3 ye4 lai2 feng1 yu3 sheng1 hua1 luo4 zhi1 duo1 shao3'},
+  {t:'登鹳雀楼',b:'二年级上册',a:'[唐] 王之涣',text:'白日依山尽，黄河入海流。欲穷千里目，更上一层楼。',
+    py:'bai2 ri4 yi1 shan1 jin4 huang2 he2 ru4 hai3 liu2 yu4 qiong2 qian1 li3 mu4 geng4 shang4 yi4 ceng2 lou2'},
+  {t:'望庐山瀑布',b:'二年级上册',a:'[唐] 李白',text:'日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。',
+    py:'ri4 zhao4 xiang1 lu2 sheng1 zi3 yan1 yao2 kan4 pu4 bu4 gua4 qian2 chuan1 fei1 liu2 zhi2 xia4 san1 qian1 chi3 yi2 shi4 yin2 he2 luo4 jiu3 tian1'}];
 const LESSON_LEN=10, DAILY_GOAL=3;
 const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
 
@@ -449,6 +479,8 @@ const learnedLetters=()=>LEARN_GROUPS.flatMap((g,i)=>learned[i]?g:[]);
 let letterMiss=store.get('letterMiss',{});
 const missedLetters=()=>Object.keys(letterMiss).filter(l=>letterMiss[l]>0&&LETTER[l]).sort((a,b)=>letterMiss[b]-letterMiss[a]);
 const reviewCount=()=>mistakeKeys().length+missedLetters().length;
+/* passages：整体认读里找齐过的课文 {序号: 1} */
+let passDone=store.get('passages',{});
 function bumpMistake(it,d){const k=it.cat+'|'+it.c;mistakes[k]=Math.max(0,(mistakes[k]||0)+d);if(!mistakes[k])delete mistakes[k];store.set('mistakes',mistakes);
   if(d>0){wrongHist[k]=(wrongHist[k]||0)+d;store.set('wrongHist',wrongHist);}}
 
@@ -471,7 +503,7 @@ const CLIPS=new Set(((window.AUDIO_CLIPS||{})[VOICE])||[]);
 const hasAudio=CLIPS.size>0, soundOK=()=>hasAudio||voiceOK;
 function fnv(s){let h=0x811c9dc5;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36);}
 /* 文件名 = 内容的哈希，生成脚本用同样的算法 */
-const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:o.l?`letter|${o.l}|${LETTER[o.l].c}|${LETTER[o.l].p}`:`say|${o.t.replace(/\s+/g,'')}`;
+const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:o.l?`letter|${o.l}|${LETTER[o.l].c}|${LETTER[o.l].p}`:o.sy?`syl|${o.sy[0]}|${o.sy[1]}`:`say|${o.t.replace(/\s+/g,'')}`;
 function clipURL(o){const k=fnv(clipKey(o));return CLIPS.has(k)?`audio/${VOICE}/${k}.mp3`:null;}
 let player=null, playQ=[];
 const warmed=new Set();
@@ -496,7 +528,7 @@ function speak(text){
   const urls=segs.map(clipURL);
   if(urls.every(Boolean)) return playClips(segs.map((o,i)=>({url:urls[i],rate:o.it?SPEEDS[speedIdx].play:1})));
   if(!voiceOK||!('speechSynthesis' in window)) return;
-  const parts=segs.flatMap(o=>o.it?[o.it.c,o.it.w,`${o.it.w}的${o.it.c}`].map(t=>({t})):o.l?[{t:LETTER[o.l].c}]:[o]);
+  const parts=segs.flatMap(o=>o.it?[o.it.c,o.it.w,`${o.it.w}的${o.it.c}`].map(t=>({t})):o.l?[{t:LETTER[o.l].c}]:o.sy?[{t:o.sy[0]}]:[o]);
   try{
     parts.forEach(o=>{
       const u=new SpeechSynthesisUtterance(o.t);
@@ -748,6 +780,7 @@ function startLesson(mode,itemsOnly){
   if(mode==='review'&&!itemsOnly&&missedLetters().length) return startLetters(letterReviewRounds(),true);
   if(mode==='letters') return startLetters();
   if(mode==='learn') return showLearn();
+  if(mode==='whole'&&!itemsOnly) return showPassages();   // 整体认读：先选课文（也可以去做练习题）
   if(mode==='write') return showWrite();
   let pool;
   if(mode==='exam') pool=buildExam();
@@ -993,6 +1026,69 @@ function showWrite(gi){
   document.getElementById('quit').onclick=home;
   const pr=document.getElementById('print'); if(pr) pr.onclick=()=>window.print();
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>showWrite(+b.dataset.g));
+}
+/* ================= 整体认读：课文里找音节 =================
+   课文每个字上面标拼音（照课本），孩子点出所有整体认读音节；点对变绿并读出来，
+   点错提示它是怎么拼的。找齐了按点错的次数给星星（prog.whole，和整体认读练习题共用） */
+function showPassages(){
+  stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
+  screen='passages';
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">📖 整体认读</div></div>
+    <p class="hint" style="margin:14px 0">读课文，找出所有整体认读音节。✅ 是找齐过的。</p>
+    <div class="lgroups">${PASSAGES.map((p,i)=>`<button class="lgrp" data-p="${i}"><span class="han">${p.t}</span><b>${passDone[i]?'✅':''}</b></button>`).join('')}</div>
+    <button class="big blue" id="wq" style="width:100%;margin-top:18px">📝 做整体认读练习题</button>`;
+  document.getElementById('quit').onclick=home;
+  document.getElementById('wq').onclick=()=>startLesson('whole',true);
+  app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>startPassage(+b.dataset.p));
+}
+function startPassage(pi){
+  unlockAudio(); stopSpeech(); screen='lesson';
+  const P=PASSAGES[pi], pys=P.py.split(' ');
+  let k=0;
+  const cells=[...P.text].map(ch=>/[一-鿿]/.test(ch)?{c:ch,p:pys[k++]}:{c:ch});
+  const targets=cells.map((x,i)=>x.p&&WHOLE_SYL.includes(base(x.p))?i:-1).filter(i=>i>=0);
+  L={mode:'whole',pi,cells,targets,found:new Set(),wrong:0,done:0,firstTotal:targets.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
+  preload([{t:P.text}].concat(targets.map(i=>({sy:[cells[i].c,cells[i].p]}))));
+  // 像课本一样一句一行（逗号、句号后换行）
+  const html=cells.map((x,i)=>x.p?`<button class="pc" data-k="${i}"><span class="pp py">${py(x.p)}</span><span class="ph han">${x.c}</span></button>`
+    :`<span class="pz">${x.c}</span>${'，。'.includes(x.c)?'<br>':''}`).join('');
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button>
+      <div class="bar"><i id="pbar" style="width:0%"></i></div><div class="combo" id="pcnt">0/${targets.length}</div></div>
+    <div class="ptitle han">${P.t}</div><div class="hint" style="text-align:center">${P.a?P.a+' · ':''}${P.b}</div>
+    <div class="passage">${html}</div>
+    <div class="hint" id="phint" style="text-align:center;min-height:22px">点一点：哪些字的拼音是整体认读音节？</div>
+    <div class="wlist16 py">${WHOLE_SYL.join(' ')}</div>
+    ${soundOK()?'<button class="minispk" id="pread" style="display:block;margin:12px auto">🔊 听课文</button>':''}`;
+  document.getElementById('quit').onclick=askQuit;
+  const rd=document.getElementById('pread'); if(rd) rd.onclick=()=>speak({t:P.text});
+  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>tapPassage(b));
+}
+function tapPassage(b){
+  unlockAudio();
+  const i=+b.dataset.k, x=L.cells[i], hint=document.getElementById('phint');
+  if(!L.targets.includes(i)){
+    L.wrong++; L.combo=0; sfx('bad');
+    b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
+    const {ini,fin,t}=splitPy(x.p);
+    const parts=MEDIAL[fin]&&!/^[yw]$/.test(ini)?[ini,fin[0],py(MEDIAL[fin]+t)]:[ini,py(fin+t)];   // 和拼一拼一样，三拼音节拆三段
+    hint.textContent=`${py(x.p)} 不是整体认读音节${ini&&fin?`，它是 ${parts.join(' + ')} 拼出来的`:''}`;
+    return;
+  }
+  speak({sy:[x.c,x.p]});
+  if(L.found.has(i)) return;
+  L.found.add(i); L.done++; L.gained+=10; L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo);
+  b.classList.add('ok'); sfx('ok');
+  hint.textContent=`✅ ${py(x.p)} 是整体认读音节`;
+  document.getElementById('pcnt').textContent=`${L.found.size}/${L.targets.length}`;
+  document.getElementById('pbar').style.width=L.found.size/L.targets.length*100+'%';
+  if(L.found.size<L.targets.length) return;
+  L.firstCorrect=Math.max(0,L.targets.length-L.wrong);   // 点错一次扣一个
+  passDone[L.pi]=1; store.set('passages',passDone);
+  const sheet=document.createElement('div'); sheet.className='sheet ok';
+  sheet.innerHTML=`<div class="sheet-in"><div class="fb-title">✅ 全部找到啦！一共 ${L.targets.length} 个</div>
+    <div class="sheet-btns"><button class="big green" id="cont">看看成绩</button></div></div>`;
+  document.body.appendChild(sheet);
+  document.getElementById('cont').onclick=()=>{sheet.remove();finish();};
 }
 function needLearn(){
   const sh=document.createElement('div');sh.className='sheet ok';

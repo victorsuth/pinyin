@@ -47,6 +47,19 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
     asked for boxes so the child sees the margins) so every letter gets the same width; first row
     3 traced + 3 blank, second row blank; red baseline). 🖨️ calls
     `window.print()`, `@media print` hides everything but the sheet.
+- **整体认读 card → 课文找音节** (`showPassages()`/`startPassage()`/`tapPassage()`;
+  `startLesson('whole')` opens the passage list, `startLesson('whole',true)`
+  is the old question lesson): 7 textbook poems (`PASSAGES`: 江南 画 悯农 from
+  1上, 静夜思 春晓 1下, 登鹳雀楼 望庐山瀑布 2上), text verified in the books and
+  **pinyin read off the textbook pages** (pdftotext -bbox like the 识字表; the
+  books differ from pypinyin: 尽 jìn, 「一层楼」 一 yì, 还 hái, 谁 shuí). Each
+  char shows its pinyin above (one clause per line); the child taps every
+  `WHOLE_SYL` syllable (green + `syl|字|拼音` clip); a wrong tap shakes and
+  explains the spelling (三拼 split like 拼一拼). Stars = targets − wrong taps,
+  stored as `prog.whole`; finished passages in new key `passages`. Audio: one
+  tone/ASR-checked clip per target syllable (欲 is synthesized from 玉, hand
+  picked) + a whole-passage reading with every char pinned to the textbook
+  reading (「🔊 听课文」).
 - The 声调 card merges the
   `tone` and `tdrill` categories: `startLesson('tone')` takes half its
   questions from the 四声对比 items and half from 声调专练; stars shown are the
@@ -154,7 +167,7 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   (`startLesson('review',true)`). A first-try match in review decrements
   `letterMiss`; a starred letter left as the last pair is never auto-connected
   or counted (it would be answered by elimination).
-- Storage keys: `prog`, `letterHist`, `letterMiss`, `learned`, `mistakes` (current 错题本, decremented by review),
+- Storage keys: `prog`, `letterHist`, `letterMiss`, `learned`, `passages`, `mistakes` (current 错题本, decremented by review),
   `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
   `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,
   `today`, `speed`, `hint`.

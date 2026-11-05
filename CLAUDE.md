@@ -40,9 +40,11 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   from `LETTER_GROUPS` (confusable sets), weighted by the new storage key
   `letterHist` (wrong count per letter, only grows). `LETTERS` = 23 声母 +
   24 韵母 with the char/pinyin used to synthesize each sound (`letter|x` audio
-  keys; f 佛 fó, d 得 dé, t 特 tè, n 讷 nè, l 勒 lè, r 日 rì, er 儿 ér, the
-  rest first tone; o uses 哦 because 喔 came out with a hump). Stars via
-  `finish()` like a lesson (`prog.letters`).
+  keys). All 声母 are read in the first tone as taught in class (the parent
+  rejected fó/dé/tè/nè/lè/rì); er is ér. Synthesis quirks: o uses 哦 (喔 had
+  a hump); l uses 乐 pinned to le1 (勒 was read lēi); ü read alone comes out
+  sounding like i — see below. Stars via `finish()` like a lesson
+  (`prog.letters`).
 - **声调专练** (`tdrill`, wide yellow card): the child is weak at tones. Its
   items are every bank character once (`ITEMS.tdrill`, built after the other
   categories, `cat:'tdrill'` so mistakes/review stay tone questions). Types
@@ -124,7 +126,12 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   praat-parselmouth and checks it (一声 high-flat, 二声 rising from low, 三声
   dip-then-rise with a low minimum, 四声 high falling); `gen_audio.py` retries
   other punctuation/emotion/speed variants (`ITEM_TRIES`, `DEMO_TRIES`) until
-  it passes, else keeps the closest. Run it with a Python that has
+  it passes, else keeps the closest. **Syllable QA:** with pypinyin installed
+  it also runs MiniMax ASR (`/v1/speech_to_text`, model `asr-1.0`) on item and
+  letter clips and rejects variants whose first recognised character can't be
+  read as the expected syllable (caught ü→yī, lē→lēi). Caveat: ASR hears an
+  isolated ü as i even in clips that are fine in context, so ü clips need the
+  parent's ear. Run it with a Python that has
   `praat-parselmouth numpy` installed (e.g. a venv) — otherwise tone checking
   is skipped; `--recheck-tones` re-tests existing clips. Tone demos say
   "第一声，妈。" etc. Still ask the parent to listen to changed clips. To

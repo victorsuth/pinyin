@@ -6,6 +6,8 @@
     python3 tools/gen_audio.py --dry-run       # 只列出要生成什么
     python3 tools/gen_audio.py --recheck-tones # 已有的字也重新测声调，不标准的重做
 
+读音检查（装了 pypinyin 时自动开启）：用 MiniMax 语音识别听一遍，确认念的音节对
+（比如 ü 曾被念成 yī）；识别出同音字也算对，只比音节不比声调。
 声调检查（装了 praat-parselmouth 时自动开启，见 tools/tones.py）：单念一个字时，
 语音合成常把一声念成升调或降调、三声只降不升。所以每个字的音频生成后测一下开头那个字的
 音高曲线，不标准就换写法（标点、语气、语速）重做，直到标准，实在不行用最接近的那一版。
@@ -82,14 +84,14 @@ def jobs():
         # 每个字都写死读音（ü 的写法接口文档没说，带 v 的不写）
         pron = [f"{it['c']}/({it['p']})"] if "v" not in it["p"] else None
         tries = [dict(text=f"{a}{pu}<#0.8#>{it['w']}。<#0.8#>{it['w']}的{a}。", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
-        js.append(dict(key=key, pron=pron, tone=int(it["p"][-1]), seg="first", tries=tries, **tries[0]))
+        js.append(dict(key=key, pron=pron, tone=int(it["p"][-1]), syl=it["p"][:-1], seg="first", tries=tries, **tries[0]))
     for i, t in enumerate(d["TONE_DEMO"]):
         tries = [dict(text=f"第{'一二三四'[i]}声，{t['c']}。", emotion=e, speed=sp) for e, sp in DEMO_TRIES]
-        js.append(dict(key=f"say|{t['c']}", pron=[f"{t['c']}/(ma{i + 1})"], tone=i + 1, seg="last", tries=tries, **tries[0]))
+        js.append(dict(key=f"say|{t['c']}", pron=[f"{t['c']}/(ma{i + 1})"], tone=i + 1, seg="last", tries=tries, **tries[0]))  # 引导语在前，不做读音识别
     # 听音连连看：声母、韵母的呼读音（用一个同音字合成，读音写死，也要过声调检查）
     for x in d["LETTERS"]:
         tries = [dict(text=f"{x['c']}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
-        js.append(dict(key=f"letter|{x['l']}", pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), seg="first", tries=tries, **tries[0]))
+        js.append(dict(key=f"letter|{x['l']}", pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]
@@ -127,6 +129,40 @@ def t2a(job, voice_id):
     raise RuntimeError(f"{job['key']}: {err}")
 
 
+def asr_text(path):
+    """MiniMax 语音识别，返回识别出的文字"""
+    b = "----pinyin" + str(time.time_ns())
+    body = b"".join(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
+                    for k, v in [("model", "asr-1.0"), ("response_format", "json")])
+    body += (f'--{b}\r\nContent-Disposition: form-data; name="file"; filename="a.mp3"\r\n'
+             f"Content-Type: audio/mpeg\r\n\r\n").encode() + open(path, "rb").read() + f"\r\n--{b}--\r\n".encode()
+    headers = {"Content-Type": f"multipart/form-data; boundary={b}", "language": "zh"}
+    if os.environ.get("MINIMAX_API_KEY"):
+        headers["Authorization"] = "Bearer " + os.environ["MINIMAX_API_KEY"]
+    for attempt in range(6):
+        try:
+            req = urllib.request.Request(API.replace("t2a_v2", "speech_to_text"), data=body, headers=headers)
+            return json.load(urllib.request.urlopen(req, timeout=90)).get("text", "")
+        except urllib.error.HTTPError as e:
+            if e.code != 429:
+                raise
+        except Exception:
+            pass
+        time.sleep(5 * (attempt + 1))
+    raise RuntimeError("语音识别失败")
+
+
+def heard_ok(path, syllable):
+    """识别出的第一个字有没有这个音节的读音（同音字也算）"""
+    from pypinyin import pinyin, Style
+    text = asr_text(path)
+    ch = next((c for c in text if "\u4e00" <= c <= "\u9fff"), None)
+    if not ch:
+        return False, text
+    reads = {re.sub(r"\d", "", x).replace("ü", "v") for x in pinyin(ch, heteronym=True, style=Style.TONE3)[0]}
+    return syllable in reads, text
+
+
 def write_manifest():
     adir = os.path.join(ROOT, "audio")
     m = {v: sorted(f[:-4] for f in os.listdir(os.path.join(adir, v)) if f.endswith(".mp3"))
@@ -153,6 +189,12 @@ def main():
     except ImportError:
         tones = None
         print("没装 praat-parselmouth，不检查声调")
+    try:
+        import pypinyin  # noqa
+        asr = True
+    except ImportError:
+        asr = False
+        print("没装 pypinyin，不做读音识别检查")
     recheck = tones and "--recheck-tones" in sys.argv
     todo = [j for j in all_jobs if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))
             or (recheck and j.get("tone"))]
@@ -167,7 +209,13 @@ def main():
         if st is None:
             return False, -99
         d = tones.describe(st)
-        return tones.ok(j["tone"], d), tones.score(j["tone"], d)
+        good, sc = tones.ok(j["tone"], d), tones.score(j["tone"], d)
+        if asr and j.get("syl"):  # 音节念错比声调不准更糟：直接压到最低分
+            right, heard = heard_ok(path, j["syl"])
+            if not right:
+                print(f"  {j['key']} 听成了「{heard}」", flush=True)
+                return False, sc - 100
+        return good, sc
 
     def run(j):
         path = os.path.join(outdir, fnv(j["key"]) + ".mp3")

@@ -957,7 +957,7 @@ function pickLetter(b){
   };
 }
 /* ================= 写一写 =================
-   按连连看里连错的次数，列出最该练的字母，配口诀和四线格（前三格描红、后三格自己写），打印出来写 */
+   列出错题本里还没复习掉的字母（最多 6 个），配口诀和四线格（前三格描红、后三格自己写），打印出来写 */
 /* 一行四线格，按常见拼音本：四条线间距 4mm（整格高 12mm）。
    单位按毫米画，A4 打印可写区约 180mm 宽，正好 1 单位 = 1mm。
    一行 6 个等宽的方框（前 3 个描红），框之间空 4mm，不管 c 还是 zh 宽度都一样，
@@ -973,10 +973,10 @@ function grid4(l,traced){
 function showWrite(gi){
   stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
   screen='write';
-  const missed=Object.entries(letterHist).filter(([l,n])=>n>0&&TIPS[l]).sort((a,b)=>b[1]-a[1]).map(([l])=>l);
+  const missed=missedLetters();   // 跟错题本走：还没复习掉的字母，错得多的在前
   const ls=gi!=null?LEARN_GROUPS[gi]:missed.slice(0,6);
   app.innerHTML=`<div class="lhead noprint"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">✍️ 写一写</div></div>
-    <p class="hint noprint" style="margin:14px 0">${gi!=null?'这一组的字母，边写边读出来':missed.length?'连连看里最常连错的字母，边写边读出来':'还没有连错的字母，选一组来写吧'}</p>
+    <p class="hint noprint" style="margin:14px 0">${gi!=null?'这一组的字母，边写边读出来':missed.length?'错题本里还没掌握的字母，边写边读出来':'错题本里没有字母，选一组来写吧'}</p>
     ${ls.length?`<div class="wsheet"><div class="wtitle">✍️ 拼音书写练习　${ymd(new Date())}</div>
       ${ls.map(l=>`<div class="wrow"><div class="whead"><span class="py wl">${l}</span><span class="wtip">${TIPS[l].e} ${TIPS[l].tip}</span></div>
         <div class="wgrids">${grid4(l,3)}${grid4(l,0)}</div></div>`).join('')}</div>

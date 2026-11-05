@@ -37,7 +37,9 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
     rounds of 3–4; the last pair auto-connects and isn't scored
     (`firstTotal` = Σ(size−1)); a wrong pick replays the target sound and shows
     its tip.
-  - 写一写 (`showWrite()`): top 6 letters by `letterHist`, or any learn group,
+  - 写一写 (`showWrite()`): up to 6 letters still in the 错题本 (`missedLetters()`,
+    i.e. `letterMiss`, most-missed first — the parent chose this over lifetime
+    `letterHist` so mastered letters drop off), or any learn group,
     each with tip and two full-width 四线格 rows (`grid4(l,traced)`: units are
     mm — 180 wide = A4 writable width with `@page` 15 mm margins; lines 4 mm
     apart (12 mm total, the common 拼音本 size — there is no official

@@ -34,7 +34,8 @@ button{font-family:inherit;cursor:pointer}
 .cat:active{transform:translateY(3px);border-bottom-width:2px}
 .cat .emoji{font-size:34px}
 .cat .cname{font-size:18px;font-weight:800;margin-top:4px}
-.cat.wide{grid-column:1/-1;background:#fff8e1;border-color:var(--yellow)}
+.cat.wide{grid-column:1/-1}
+.cat.hl{background:#fff8e1;border-color:var(--yellow)}
 .cat .cdesc{font-size:12px;color:var(--muted);margin-top:3px;min-height:16px}
 .stars{color:var(--yellow);font-size:18px;margin-top:4px;letter-spacing:2px}
 .stars .off{color:#ddd}
@@ -287,6 +288,13 @@ const EMO={
   '房':'🏠','虫':'🐛','气':'⛅','彩':'🌈','鸡':'🐤','米':'🌽','牛':'🐮','羊':'🐑','玉':'🌽'
 };
 const ORDER=['nasal','pingqiao','shape','tone','tdrill','spell','umlaut','whole','triple'];
+/* 首页卡片，按学习顺序：认字母 → 声调 → 声母、韵母规则 → 拼读 → 综合。
+   「声调」卡合并了 tone 和 tdrill 两类（出题见 startLesson），两类的星星、错题还是分开存 */
+const HOME=[
+  {id:'letters',emoji:'🔤',name:'听音连连看',desc:'听声音，认声母韵母',wide:1},
+  {id:'tone',name:'声调',desc:'四声对比 · 听音辨调 · 标调位置',wide:1,hl:1,stars:['tone','tdrill']},
+  {id:'shape'},{id:'pingqiao'},{id:'nasal'},{id:'umlaut'},{id:'spell'},{id:'triple'},{id:'whole'},
+  {id:'mix',emoji:'🎲',name:'混合挑战',desc:'所有类型随机出题'}];
 const ITEMS={};let ALL=[];
 ORDER.forEach(id=>{ITEMS[id]=CATS[id].items.map(([c,w,p,d])=>({c,w,p,d,e:EMO[c]||'',cat:id}));ALL=ALL.concat(ITEMS[id]);});
 /* 声调专练、拼一拼：用全部题库的字（同一个字只要一次） */
@@ -476,14 +484,10 @@ function home(){
   app.innerHTML=`${topbar()}
     <h1 class="title han">拼音大冒险</h1>
     <p class="sub">每天闯 ${DAILY_GOAL} 关，拼音变高手！</p>
-    <div class="grid">${ORDER.map(id=>{const c=CATS[id];return `
-      <button class="cat${id==='tdrill'?' wide':''}" data-mode="${id}"><div class="emoji">${c.emoji}</div>
+    <div class="grid">${HOME.map(h=>{const c={...CATS[h.id],...h},st=Math.max(...(h.stars||[h.id]).map(k=>(prog[k]||{}).stars||0));return `
+      <button class="cat${h.wide?' wide':''}${h.hl?' hl':''}" data-mode="${h.id}"><div class="emoji">${c.emoji}</div>
       <div class="cname">${c.name}</div><div class="cdesc py">${c.desc}</div>
-      ${starsHTML((prog[id]||{}).stars||0)}</button>`;}).join('')}
-      <button class="cat" data-mode="letters"><div class="emoji">🔤</div><div class="cname">听音连连看</div>
-      <div class="cdesc">听声音，连字母</div>${starsHTML((prog.letters||{}).stars||0)}</button>
-      <button class="cat" data-mode="mix"><div class="emoji">🎲</div><div class="cname">混合挑战</div>
-      <div class="cdesc">所有类型随机出题</div>${starsHTML((prog.mix||{}).stars||0)}</button>
+      ${starsHTML(st)}</button>`;}).join('')}
     </div>
     <div class="row2" style="grid-template-columns:1fr">
       <button class="big blue" data-mode="exam">📝 综合考试（${EXAM_LEN} 题）
@@ -636,6 +640,10 @@ function startLesson(mode){
   else if(mode==='mix'){  // 每类先抽几个，再打乱，同一个字只出一次
     const seen=new Set();
     pool=shuffle(ORDER.flatMap(id=>shuffle(ITEMS[id].slice()).slice(0,3))).filter(i=>!seen.has(i.c)&&seen.add(i.c)).slice(0,LESSON_LEN);
+  }
+  else if(mode==='tone'){  // 首页「声调」卡：四声对比组、声调专练各一半，同一个字只出一次
+    const a=shuffle(ITEMS.tone.slice()).slice(0,LESSON_LEN/2);
+    pool=shuffle(a.concat(shuffle(ITEMS.tdrill.filter(i=>!a.some(x=>x.c===i.c))).slice(0,LESSON_LEN-a.length)));
   }
   else pool=shuffle(ITEMS[mode].slice()).slice(0,LESSON_LEN);
   if(!pool.length) return home();

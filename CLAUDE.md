@@ -20,6 +20,13 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   never rename/remove existing storage keys (the child would lose progress).
 
 ## How the game works
+- **Home screen** follows `HOME` (learning order chosen by the parent):
+  听音连连看 (wide) → 声调 (wide, yellow) → 形近字母, 平舌翘舌 → 前后鼻音,
+  ü 的规则 → 拼一拼, 三拼音节 → 整体认读, 混合挑战. The 声调 card merges the
+  `tone` and `tdrill` categories: `startLesson('tone')` takes half its
+  questions from the 四声对比 items and half from 声调专练; stars shown are the
+  max of both; `tdrill` has no card of its own but stays in `ORDER` (exam
+  coverage, 错题本 keys `tdrill|字`).
 - 9 categories (`ORDER`) + 听音连连看 + 混合挑战 + 错题本复习 + 综合考试:
   `nasal` 前后鼻音, `pingqiao` 平舌翘舌, `shape` 形近字母 (b/d/p/q, m/n, f/t),
   `tone` 声调, `tdrill` 声调专练, `spell` 拼一拼, `umlaut` ü 的规则,

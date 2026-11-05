@@ -141,6 +141,11 @@ button{font-family:inherit;cursor:pointer}
 .pc.ok{background:var(--green-bg);border-color:var(--green)}
 .pc.ok .pp,.pc.ok .ph{color:var(--green-d)}
 .pc.bad{background:var(--red-bg);border-color:var(--red);animation:shake .35s}
+.pc.blank .pp{color:var(--orange);font-size:16px}
+.pc.blank{border:2px dashed #e0c070}
+.pc.cur{background:var(--blue-bg);border:2px solid var(--blue)}
+.pc.blank.ok .pp{color:var(--green-d)}
+.apanel{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px 10px 12px;margin-top:8px}
 .pz{font-size:26px;color:var(--muted);vertical-align:bottom;display:inline-block;padding-bottom:8px}
 .wlist16{text-align:center;font-size:13px;color:var(--muted);margin-top:8px;word-spacing:4px}
 /* 写一写（可打印） */
@@ -338,8 +343,9 @@ const HOME=[
   {id:'letters',emoji:'🔤',name:'听音连连看',desc:'只考学过的字母'},
   {id:'write',emoji:'✍️',name:'写一写',desc:'打印连错的字母来写',stars:[]},
   {id:'tone',name:'声调',desc:'四声对比 · 听音辨调 · 标调位置',wide:1,hl:1,stars:['tone','tdrill']},
-  {id:'shape'},{id:'pingqiao'},{id:'nasal'},{id:'umlaut'},{id:'spell'},{id:'triple'},{id:'whole'},
-  {id:'mix',emoji:'🎲',name:'混合挑战',desc:'所有类型随机出题'}];
+  {id:'shape'},{id:'pingqiao'},{id:'nasal'},{id:'umlaut'},{id:'triple'},{id:'whole'},
+  {id:'spell'},{id:'annot',emoji:'🖊️',name:'课文标拼音',desc:'给课本古诗里的字标拼音'},
+  {id:'mix',emoji:'🎲',name:'混合挑战',desc:'所有类型随机出题',wide:1}];
 const ITEMS={};let ALL=[];
 ORDER.forEach(id=>{ITEMS[id]=CATS[id].items.map(([c,w,p,d])=>({c,w,p,d,e:EMO[c]||'',cat:id}));ALL=ALL.concat(ITEMS[id]);});
 /* 声调专练、拼一拼：用全部题库的字（同一个字只要一次） */
@@ -435,7 +441,7 @@ const PASSAGES=[
   {t:'望庐山瀑布',b:'二年级上册',a:'[唐] 李白',text:'日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。',
     py:'ri4 zhao4 xiang1 lu2 sheng1 zi3 yan1 yao2 kan4 pu4 bu4 gua4 qian2 chuan1 fei1 liu2 zhi2 xia4 san1 qian1 chi3 yi2 shi4 yin2 he2 luo4 jiu3 tian1'}];
 const LESSON_LEN=10, DAILY_GOAL=3;
-const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
+const EXAM_LEN=20;   // 综合考试：20 题，各类平均
 
 /* ================= 拼音工具 ================= */
 const MARKS={a:'āáǎà',e:'ēéěè',i:'īíǐì',o:'ōóǒò',u:'ūúǔù',v:'ǖǘǚǜ'};
@@ -467,7 +473,7 @@ function curStreak(){const t=ymd(new Date()),y=ymd(new Date(Date.now()-864e5));r
 /* 题库换掉的字，旧错题记录还留在存档里，但不再计数、不再出题 */
 function mistakeKeys(){return Object.entries(mistakes).filter(([k,n])=>n>0&&findItem(k)).sort((a,b)=>b[1]-a[1]).map(([k])=>k);}
 function findItem(k){const [cat,c]=k.split('|');return (ITEMS[cat]||[]).find(i=>i.c===c);}
-/* wrongHist：每道题累计错过几次，只增不减（错题本复习答对会移出，这里还留着，考试用） */
+/* wrongHist：每道题累计错过几次，只增不减（错题本复习答对会移出，这里还留着；现在只留作记录） */
 let wrongHist=store.get('wrongHist',{}), exams=store.get('exams',[]);
 /* letterHist：听音连连看里每个字母连错过几次，只增不减，用来多出错过的那组 */
 let letterHist=store.get('letterHist',{});
@@ -617,7 +623,7 @@ function home(){
     </div>
     <div class="row2" style="grid-template-columns:1fr">
       <button class="big blue" data-mode="exam">📝 综合考试（${EXAM_LEN} 题）
-        <div class="bsub">${last?`上次 ${last.score} 分 · 最好 ${best} 分`:m||Object.keys(wrongHist).length?'重点考以前错过的题':'各类拼音都会考到'}</div></button>
+        <div class="bsub">${last?`上次 ${last.score} 分 · 最好 ${best} 分`:'各类拼音平均出题'}</div></button>
       <button class="big ${m?'orange':'gray'}" data-mode="review" ${m?'':'disabled'}>📒 错题本复习 ${m?`（${m} 个${ml?`，含 ${ml} 个字母`:''}）`:'（还没有错题）'}</button>
     </div>
     <div class="speedrow">🖼️ 模式：<button class="spd ${hintMode?'on':''}" data-hint="1">看图+读字</button><button class="spd ${hintMode?'':'on'}" data-hint="0">挑战（不提示）</button></div>
@@ -741,27 +747,15 @@ function makeQ(it,retry=false){
   return {it,type,opts:shuffle(set),ans:it.p,retry};
 }
 function unlockSpeech(){ loadVoices(); }
-/* 综合考试出题：① 错过的题优先（错题本里的分量最重，以前错过、已改正的也再考）
-   ② 七类每类至少一题 ③ 剩下的名额多给错得多、星星少的类型。同一个字只考一次 */
+/* 综合考试出题：纯考试，各类平均随机出（轮流每类抽一题，抽满 20 题），同一个字只考一次。
+   不偏向错题——错题交给错题本复习（家长的要求） */
 function buildExam(){
-  const picked=[],usedC=new Set();
-  const take=it=>{if(!it||usedC.has(it.c)||picked.length>=EXAM_LEN)return false;usedC.add(it.c);picked.push(it);return true;};
-  const w=it=>{const k=it.cat+'|'+it.c;return 3*(mistakes[k]||0)+(wrongHist[k]||0);};
-  let n=0;
-  for(const {it} of ALL.filter(it=>w(it)>0).map(it=>({it,s:w(it)+Math.random()})).sort((a,b)=>b.s-a.s)){
-    if(n>=EXAM_WRONG_MAX)break;
-    // 留够名额：每类至少还能出一题
-    const left=ORDER.filter(id=>id!==it.cat&&!picked.some(x=>x.cat===id)).length;
-    if(picked.length+1+left>EXAM_LEN) continue;
-    if(take(it))n++;
-  }
-  ORDER.forEach(id=>{if(!picked.some(it=>it.cat===id))take(shuffle(ITEMS[id].filter(it=>!usedC.has(it.c)))[0]);});
-  const cw={};ORDER.forEach(id=>{cw[id]=1+(3-((prog[id]||{}).stars||0))+ITEMS[id].reduce((s,it)=>s+w(it),0)/3;});
-  for(let g=0;picked.length<EXAM_LEN&&g<500;g++){
-    let r=Math.random()*ORDER.reduce((s,id)=>s+cw[id],0),id=ORDER[ORDER.length-1];
-    for(const c of ORDER){if((r-=cw[c])<0){id=c;break;}}
-    take(shuffle(ITEMS[id].filter(it=>!usedC.has(it.c)))[0]);
-  }
+  const picked=[],usedC=new Set(),pools=Object.fromEntries(ORDER.map(id=>[id,shuffle(ITEMS[id].slice())]));
+  for(let round=0;picked.length<EXAM_LEN&&round<50;round++)
+    for(const id of shuffle(ORDER.slice())){
+      if(picked.length>=EXAM_LEN)break;
+      const it=pools[id].find(x=>!usedC.has(x.c)); if(it){usedC.add(it.c);picked.push(it);}
+    }
   return shuffle(picked);
 }
 /* 错题本复习里的字母：每轮 1 个错过的字母（带⭐），从易混组里配 3 个（错 b 就配 d p q），最多 3 轮 */
@@ -780,7 +774,7 @@ function startLesson(mode,itemsOnly){
   if(mode==='review'&&!itemsOnly&&missedLetters().length) return startLetters(letterReviewRounds(),true);
   if(mode==='letters') return startLetters();
   if(mode==='learn') return showLearn();
-  if(mode==='whole'&&!itemsOnly) return showPassages();   // 整体认读：先选课文（也可以去做练习题）
+  if(mode==='annot') return showPassages();
   if(mode==='write') return showWrite();
   let pool;
   if(mode==='exam') pool=buildExam();
@@ -1027,65 +1021,131 @@ function showWrite(gi){
   const pr=document.getElementById('print'); if(pr) pr.onclick=()=>window.print();
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>showWrite(+b.dataset.g));
 }
-/* ================= 整体认读：课文里找音节 =================
-   课文每个字上面标拼音（照课本），孩子点出所有整体认读音节；点对变绿并读出来，
-   点错提示它是怎么拼的。找齐了按点错的次数给星星（prog.whole，和整体认读练习题共用） */
+/* ================= 课文标拼音 =================
+   课本里的古诗，挖掉几个字的拼音，孩子用卡片标上。挖空的字点一下能听读音（不认识的字也能做）。
+   整体认读字给整个音节的卡片（zhī / zī / chī …，专放 i、ü、ie 这类陷阱，练「整体认读不用拼」），
+   其他字像拼一拼一样用声母、介母、韵母卡片组。标完按标错的次数给星星（prog.annot） */
+const ANNOT_BLANKS=6;
+/* 整体认读音节的易混项：拼错的写法（i、ü、ie…）和平翘舌、前后鼻音 */
+const WHOLE_CONF={zhi:['zi','chi'],chi:['ci','shi'],shi:['si','chi'],ri:['shi','zi'],zi:['zhi','ci'],ci:['chi','si'],si:['shi','zi'],
+  yi:['i','yu'],wu:['u','wo'],yu:['v','yi'],ye:['ie','yue'],yue:['ve','ye'],yuan:['van','yan'],yin:['in','ying'],yun:['vn','yin'],ying:['ing','yin']};
 function showPassages(){
   stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
   screen='passages';
-  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">📖 整体认读</div></div>
-    <p class="hint" style="margin:14px 0">读课文，找出所有整体认读音节。✅ 是找齐过的。</p>
-    <div class="lgroups">${PASSAGES.map((p,i)=>`<button class="lgrp" data-p="${i}"><span class="han">${p.t}</span><b>${passDone[i]?'✅':''}</b></button>`).join('')}</div>
-    <button class="big blue" id="wq" style="width:100%;margin-top:18px">📝 做整体认读练习题</button>`;
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button><div class="qlabel" style="margin:0">🖊️ 课文标拼音</div></div>
+    <p class="hint" style="margin:14px 0">课本里的古诗，给空着的字标上拼音。✅ 是标完过的。</p>
+    <div class="lgroups">${PASSAGES.map((p,i)=>`<button class="lgrp" data-p="${i}"><span class="han">${p.t}</span><b>${passDone[i]?'✅':''}</b></button>`).join('')}</div>`;
   document.getElementById('quit').onclick=home;
-  document.getElementById('wq').onclick=()=>startLesson('whole',true);
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>startPassage(+b.dataset.p));
+}
+/* 挖哪些字：题库里学过的字和整体认读字（同一个字只挖一次），整体认读至少两个，每次随机 */
+function pickBlanks(cells){
+  const known=new Set(ALL.map(i=>i.c)), seen=new Set();
+  const cand=shuffle(cells.map((x,i)=>i).filter(i=>{const x=cells[i];
+    if(!x.p||seen.has(x.c))return false;
+    const whole=WHOLE_SYL.includes(base(x.p)), ok=whole||(known.has(x.c)&&splitPy(x.p).ini);
+    if(ok)seen.add(x.c); return ok;}));
+  const isW=i=>WHOLE_SYL.includes(base(cells[i].p));
+  const pick=cand.filter(isW).slice(0,2);
+  for(const i of cand) if(pick.length<ANNOT_BLANKS&&!pick.includes(i)) pick.push(i);
+  // 学过的字太少（江南、悯农）：用课文里别的字补到 4 个，挖空的字点一下能听，不认识也能做
+  for(const i of shuffle(cells.map((x,i)=>i))){
+    const x=cells[i];
+    if(pick.length>=4) break;
+    if(x.p&&splitPy(x.p).ini&&!pick.some(j=>cells[j].c===x.c)) pick.push(i);
+  }
+  return pick.sort((a,b)=>a-b);
+}
+/* 一个空的卡片：整体认读给 4 个整音节；其他字用拼一拼的卡片 */
+function annotQ(x){
+  const b=base(x.p), t=+x.p.slice(-1);
+  if(WHOLE_SYL.includes(b)){
+    const opts=[x.p]; const add=v=>{if(opts.length<4&&!opts.some(o=>py(o)===py(v)))opts.push(v);};
+    WHOLE_CONF[b].forEach(c=>add(c+t));
+    shuffle([1,2,3,4].filter(u=>u!==t)).forEach(u=>add(b+u));
+    return {whole:true,opts:shuffle(opts)};
+  }
+  const q=makeSpellQ({c:x.c,p:x.p,w:x.c},false);
+  return {whole:false,n:q.n,tiles:q.tiles,sel:q.sel};
 }
 function startPassage(pi){
   unlockAudio(); stopSpeech(); screen='lesson';
   const P=PASSAGES[pi], pys=P.py.split(' ');
   let k=0;
   const cells=[...P.text].map(ch=>/[一-鿿]/.test(ch)?{c:ch,p:pys[k++]}:{c:ch});
-  const targets=cells.map((x,i)=>x.p&&WHOLE_SYL.includes(base(x.p))?i:-1).filter(i=>i>=0);
-  L={mode:'whole',pi,cells,targets,found:new Set(),wrong:0,done:0,firstTotal:targets.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
-  preload([{t:P.text}].concat(targets.map(i=>({sy:[cells[i].c,cells[i].p]}))));
-  // 像课本一样一句一行（逗号、句号后换行）
-  const html=cells.map((x,i)=>x.p?`<button class="pc" data-k="${i}"><span class="pp py">${py(x.p)}</span><span class="ph han">${x.c}</span></button>`
+  const blanks=pickBlanks(cells);
+  L={mode:'annot',pi,cells,blanks,done:new Set(),cur:null,wrong:0,firstTotal:blanks.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
+  preload([{t:P.text}].concat(blanks.map(i=>({sy:[cells[i].c,cells[i].p]}))));
+  // 像课本一样一句一行（逗号、句号后换行）；挖空的字拼音位置是个问号框
+  const html=cells.map((x,i)=>x.p?`<button class="pc${blanks.includes(i)?' blank':''}" data-k="${i}"><span class="pp py">${blanks.includes(i)?'？':py(x.p)}</span><span class="ph han">${x.c}</span></button>`
     :`<span class="pz">${x.c}</span>${'，。'.includes(x.c)?'<br>':''}`).join('');
   app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button>
-      <div class="bar"><i id="pbar" style="width:0%"></i></div><div class="combo" id="pcnt">0/${targets.length}</div></div>
+      <div class="bar"><i id="pbar" style="width:0%"></i></div><div class="combo" id="pcnt">0/${blanks.length}</div></div>
     <div class="ptitle han">${P.t}</div><div class="hint" style="text-align:center">${P.a?P.a+' · ':''}${P.b}</div>
     <div class="passage">${html}</div>
-    <div class="hint" id="phint" style="text-align:center;min-height:22px">点一点：哪些字的拼音是整体认读音节？</div>
-    <div class="wlist16 py">${WHOLE_SYL.join(' ')}</div>
+    <div id="apanel" class="apanel"><div class="hint" style="text-align:center">点一个带 ？ 的字，给它标上拼音</div></div>
     ${soundOK()?'<button class="minispk" id="pread" style="display:block;margin:12px auto">🔊 听课文</button>':''}`;
   document.getElementById('quit').onclick=askQuit;
   const rd=document.getElementById('pread'); if(rd) rd.onclick=()=>speak({t:P.text});
-  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>tapPassage(b));
+  app.querySelectorAll('.pc.blank').forEach(b=>b.onclick=()=>openBlank(+b.dataset.k));
+  openBlank(blanks[0]);
 }
-function tapPassage(b){
+function openBlank(i,silent){
+  const x=L.cells[i];
+  if(L.done.has(i)){speak({sy:[x.c,x.p]});return;}
+  L.cur={i,q:annotQ(x)};
+  app.querySelectorAll('.pc.blank').forEach(b=>b.classList.toggle('cur',+b.dataset.k===i));
+  if(!silent) speak({sy:[x.c,x.p]});   // 点到的字先读一遍（定时器里重开时不读：iPhone 只允许点按时出声）
+  const q=L.cur.q, pan=document.getElementById('apanel');
+  pan.innerHTML=`<div class="tlabel" style="text-align:center">给「<span class="han" style="font-size:20px">${x.c}</span>」标拼音
+      ${soundOK()?'<button class="minispk" id="aspk" style="margin:0 0 0 6px;padding:2px 10px">🔊</button>':''}</div>`+
+    (q.whole?`<div class="opts">${q.opts.map(o=>`<button class="opt py" data-v="${o}">${py(o)}</button>`).join('')}</div>`
+    :`<div class="slots">${[...Array(q.n)].map((_,k)=>`<button class="slot py" id="s${k}"></button>`).join('<span>+</span>')}<span>=</span><span class="slot res py" id="sres">？</span></div>
+      <div class="tiles">${q.tiles.map((t,j)=>`<button class="tile py" data-t="${j}">${t.s}</button>`).join('')}</div>`);
+  const sp=document.getElementById('aspk'); if(sp) sp.onclick=()=>speak({sy:[x.c,x.p]});
+  if(q.whole) pan.querySelectorAll('.opt').forEach(b=>b.onclick=()=>annotAnswer(b.dataset.v,b));
+  else{
+    pan.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>annotTile(+b.dataset.t));
+    q.sel.forEach((_,k)=>document.getElementById('s'+k).onclick=()=>annotTile(null,k));
+  }
+}
+function annotTile(ti,slot){
   unlockAudio();
-  const i=+b.dataset.k, x=L.cells[i], hint=document.getElementById('phint');
-  if(!L.targets.includes(i)){
+  const q=L.cur.q;
+  if(slot!=null) q.sel[slot]=null;
+  else{const k=q.sel.indexOf(null); if(k<0||q.sel.includes(ti)) return; q.sel[k]=ti; sfx('tap');}
+  app.querySelectorAll('#apanel [data-t]').forEach(b=>b.classList.toggle('used',q.sel.includes(+b.dataset.t)));
+  q.sel.forEach((x,k)=>document.getElementById('s'+k).textContent=x==null?'':q.tiles[x].s);
+  if(q.sel.includes(null)){document.getElementById('sres').textContent='？';return;}
+  document.getElementById('sres').textContent=q.sel.map(x=>q.tiles[x].s).join('');
+  annotAnswer(q.sel.map(x=>q.tiles[x].v).join(''),null);
+}
+function annotAnswer(v,btn){
+  unlockAudio();
+  const {i}=L.cur, x=L.cells[i], cell=app.querySelector(`.pc[data-k="${i}"]`);
+  if(v!==x.p){
+    // 标错：抖一下，清空重来（拼的卡片放回去）
     L.wrong++; L.combo=0; sfx('bad');
-    b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
-    const {ini,fin,t}=splitPy(x.p);
-    const parts=MEDIAL[fin]&&!/^[yw]$/.test(ini)?[ini,fin[0],py(MEDIAL[fin]+t)]:[ini,py(fin+t)];   // 和拼一拼一样，三拼音节拆三段
-    hint.textContent=`${py(x.p)} 不是整体认读音节${ini&&fin?`，它是 ${parts.join(' + ')} 拼出来的`:''}`;
+    const tgt=btn||document.getElementById('sres');
+    tgt.classList.remove('bad'); void tgt.offsetWidth; tgt.classList.add('bad');
+    if(!L.cur.q.whole){L.cur.q.sel.fill(null);setTimeout(()=>{if(L.cur&&L.cur.i===i)openBlank(i,true);},700);}
     return;
   }
-  speak({sy:[x.c,x.p]});
-  if(L.found.has(i)) return;
-  L.found.add(i); L.done++; L.gained+=10; L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo);
-  b.classList.add('ok'); sfx('ok');
-  hint.textContent=`✅ ${py(x.p)} 是整体认读音节`;
-  document.getElementById('pcnt').textContent=`${L.found.size}/${L.targets.length}`;
-  document.getElementById('pbar').style.width=L.found.size/L.targets.length*100+'%';
-  if(L.found.size<L.targets.length) return;
-  L.firstCorrect=Math.max(0,L.targets.length-L.wrong);   // 点错一次扣一个
+  sfx('ok'); speak({sy:[x.c,x.p]});
+  L.done.add(i); L.gained+=10; L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo);
+  cell.classList.remove('cur'); cell.classList.add('ok'); cell.querySelector('.pp').textContent=py(x.p);
+  document.getElementById('pcnt').textContent=`${L.done.size}/${L.blanks.length}`;
+  document.getElementById('pbar').style.width=L.done.size/L.blanks.length*100+'%';
+  const nxt=L.blanks.find(b=>!L.done.has(b));
+  if(nxt!=null){
+    L.cur=null;
+    document.getElementById('apanel').innerHTML=`<div class="hint" style="text-align:center">✅ ${py(x.p)}　接着点下一个带 ？ 的字</div>`;
+    return;
+  }
+  L.firstCorrect=Math.max(0,L.blanks.length-L.wrong);   // 标错一次扣一个
   passDone[L.pi]=1; store.set('passages',passDone);
   const sheet=document.createElement('div'); sheet.className='sheet ok';
-  sheet.innerHTML=`<div class="sheet-in"><div class="fb-title">✅ 全部找到啦！一共 ${L.targets.length} 个</div>
+  sheet.innerHTML=`<div class="sheet-in"><div class="fb-title">✅ 全部标好啦！</div>
     <div class="sheet-btns"><button class="big green" id="cont">看看成绩</button></div></div>`;
   document.body.appendChild(sheet);
   document.getElementById('cont').onclick=()=>{sheet.remove();finish();};

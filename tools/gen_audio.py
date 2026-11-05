@@ -100,14 +100,14 @@ def jobs():
         # key 带上字和读音：换读音就换文件名，浏览器不会继续用缓存里的旧音频
         js.append(dict(key=f"letter|{x['l']}|{x['c']}|{x['p']}",pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
     # 学一学的口诀：里面的读音字（佛、得、乐、儿、昂…）和字母读音一样写死成一声
-    # 整体认读课文：每个整体认读音节单念一遍（点到时播，要过声调和读音检查），
+    # 课文标拼音：课文里每个字单念一遍（点挖空的字时播，要过声调和读音检查），
     # 再整篇朗读一遍；读音都照课本（课本标的拼音写死，比如「一层楼」的 yì）
     syl_seen = set()
     for P in d["PASSAGES"]:
         han = [c for c in P["text"] if "\u4e00" <= c <= "\u9fff"]
         ps = P["py"].split()
         for c, p in zip(han, ps):
-            if p[:-1] in d["WHOLE_SYL"] and (c, p) not in syl_seen:
+            if (c, p) not in syl_seen:  # 课文标拼音：挖空的字点了要能听，所以每个字都要
                 syl_seen.add((c, p))
                 tries = [dict(text=f"{c}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
                 js.append(dict(key=f"syl|{c}|{p}", pron=[f"{c}/({p})"], tone=int(p[-1]), syl=p[:-1], seg="first", tries=tries, **tries[0]))

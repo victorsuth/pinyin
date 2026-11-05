@@ -22,7 +22,8 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 ## How the game works
 - **Home screen** follows `HOME` (learning order chosen by the parent):
   学一学 (wide, green) → 听音连连看, 写一写 → 声调 (wide, yellow) → 形近字母,
-  平舌翘舌 → 前后鼻音, ü 的规则 → 拼一拼, 三拼音节 → 整体认读, 混合挑战.
+  平舌翘舌 → 前后鼻音, ü 的规则 → 三拼音节, 整体认读 → 拼一拼, 课文标拼音 →
+  混合挑战 (wide).
 - **Learn → practise → write** (the child couldn't yet map symbols to sounds,
   and the parent reinforces offline by writing):
   - 学一学 (`showLearn()`/`learnCard()`/`practiceGroup()`): 15 groups in
@@ -47,19 +48,21 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
     asked for boxes so the child sees the margins) so every letter gets the same width; first row
     3 traced + 3 blank, second row blank; red baseline). 🖨️ calls
     `window.print()`, `@media print` hides everything but the sheet.
-- **整体认读 card → 课文找音节** (`showPassages()`/`startPassage()`/`tapPassage()`;
-  `startLesson('whole')` opens the passage list, `startLesson('whole',true)`
-  is the old question lesson): 7 textbook poems (`PASSAGES`: 江南 画 悯农 from
-  1上, 静夜思 春晓 1下, 登鹳雀楼 望庐山瀑布 2上), text verified in the books and
-  **pinyin read off the textbook pages** (pdftotext -bbox like the 识字表; the
-  books differ from pypinyin: 尽 jìn, 「一层楼」 一 yì, 还 hái, 谁 shuí). Each
-  char shows its pinyin above (one clause per line); the child taps every
-  `WHOLE_SYL` syllable (green + `syl|字|拼音` clip); a wrong tap shakes and
-  explains the spelling (三拼 split like 拼一拼). Stars = targets − wrong taps,
-  stored as `prog.whole`; finished passages in new key `passages`. Audio: one
-  tone/ASR-checked clip per target syllable (欲 is synthesized from 玉, hand
-  picked) + a whole-passage reading with every char pinned to the textbook
-  reading (「🔊 听课文」).
+- **课文标拼音** (`mode==='annot'`, home card next to 拼一拼; `showPassages()`
+  → `startPassage()`/`openBlank()`/`annotTile()`/`annotAnswer()`): 7 textbook
+  poems (`PASSAGES`: 江南 画 悯农 1上, 静夜思 春晓 1下, 登鹳雀楼 望庐山瀑布 2上), text
+  verified in the books and **pinyin read off the textbook pages** (pdftotext
+  -bbox like the 识字表; the books differ from pypinyin: 尽 jìn, 「一层楼」 一 yì,
+  还 hái, 谁 shuí). `pickBlanks()` blanks up to 6 distinct chars (≥2 整体认读
+  where possible, otherwise bank chars; topped up to 4 from other chars for 江南
+  / 悯农). Tapping a blank plays its `syl|字|拼音` clip; 整体认读 blanks offer 4
+  whole-syllable options (`WHOLE_CONF` traps: i/ü/ie/üe/üan/ün, flat vs
+  retroflex, other tones), others reuse `makeSpellQ()` tiles. Stars = blanks −
+  wrong answers → `prog.annot`; finished poems in key `passages`. Audio: a
+  checked `syl|` clip for every char of every poem (欲 synthesized from 玉,
+  hand-picked) + a whole-poem reading pinned to the textbook readings.
+  (An earlier 「找一找」 version lived inside 整体认读; the parent wanted 整体认读
+  left as the plain question lesson and this as its own module.)
 - The 声调 card merges the
   `tone` and `tdrill` categories: `startLesson('tone')` takes half its
   questions from the 四声对比 items and half from 声调专练; stars shown are the
@@ -149,13 +152,12 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   `p2c` 看拼音选字 (in hint mode becomes 看拼音选图).
 - 10 questions per lesson; wrong answers are re-queued at the end and added to
   the 错题本; stars by first-try accuracy (≥90% ★★★, ≥70% ★★).
-- 综合考试 (`mode==='exam'`, `buildExam()`): 20 questions, no per-question
-  feedback — child selects (can change) then taps 下一题/交卷; result page shows
-  score /100, per-category bars and the wrong list. Selection: up to 14 items
-  weighted by `3*mistakes + wrongHist` (current 错题本 first, then items ever
-  missed), then ≥1 item per category, then remaining slots weighted toward
-  categories with more mistakes / fewer stars. One question per 汉字.
-  Wrong answers go into the 错题本; correct ones don't remove anything.
+- 综合考试 (`mode==='exam'`, `buildExam()`): a plain exam — 20 questions drawn
+  evenly at random across all `ORDER` categories (round-robin, one per 汉字),
+  NOT weighted toward mistakes (the parent wants mistakes handled by 错题本复习).
+  No per-question feedback — child selects (can change) then taps 下一题/交卷;
+  result page shows score /100, per-category bars and the wrong list. Wrong
+  answers still go into the 错题本. `wrongHist` is still recorded but unused.
 - If an item's 汉字 is replaced, its old `cat|字` keys stay in `mistakes` /
   `wrongHist` (never delete progress); `mistakeKeys()` skips keys without a
   matching item, and `buildExam()` only iterates `ALL`.

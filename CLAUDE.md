@@ -42,7 +42,9 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   24 韵母 with the char/pinyin used to synthesize each sound (`letter|x` audio
   keys). All 声母 are read in the first tone as taught in class (the parent
   rejected fó/dé/tè/nè/lè/rì); er is ér. Synthesis quirks: o uses 哦 (喔 had
-  a hump); l uses 乐 pinned to le1 (勒 was read lēi); ü read alone comes out
+  a hump); l uses 乐 pinned to le1 (勒 was read lēi); ai uses 埃 (哀 sounded
+  like 欸; the kept clip was picked by the parent — ASR hears it as English
+  "I", so a regenerate would wrongly reject it); ü read alone comes out
   sounding like i — see below. Stars via `finish()` like a lesson
   (`prog.letters`).
 - **声调专练** (`tdrill`, wide yellow card): the child is weak at tones. Its

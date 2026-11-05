@@ -165,9 +165,9 @@ button{font-family:inherit;cursor:pointer}
 .lcard.bad{background:var(--red-bg);border-color:var(--red);color:var(--red-d);animation:shake .35s}
 /* 拼一拼 */
 .slots{display:flex;align-items:center;justify-content:center;gap:8px;font-size:26px;font-weight:800;color:var(--muted);margin:4px 0 14px}
-.slot{min-width:72px;height:60px;border:2px dashed #c9c9c9;border-radius:14px;background:var(--card);font-size:30px;font-weight:700;
+.slot{min-width:56px;height:58px;border:2px dashed #c9c9c9;border-radius:14px;background:var(--card);font-size:26px;font-weight:700;
   color:var(--text);display:inline-flex;align-items:center;justify-content:center;padding:0 8px}
-.slot.res{border-style:solid;min-width:96px;color:var(--blue-d)}
+.slot.res{border-style:solid;min-width:80px;color:var(--blue-d)}
 .slot.res.ok{border-color:var(--green);background:var(--green-bg);color:var(--green-d)}
 .slot.res.bad{border-color:var(--red);background:var(--red-bg);color:var(--red-d)}
 .tlabel{font-size:14px;font-weight:700;color:var(--muted);margin:8px 0 6px}
@@ -175,6 +175,7 @@ button{font-family:inherit;cursor:pointer}
 .tile{background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:14px;padding:12px 2px;font-size:26px;font-weight:700;color:var(--text)}
 .tile:active{transform:translateY(3px);border-bottom-width:2px}
 .tile.sel{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-d)}
+.tile.used{opacity:.3}
 /* exam */
 .bsub{font-size:13px;font-weight:600;opacity:.92;margin-top:3px}
 .opt.sel{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-d)}
@@ -663,15 +664,22 @@ const CONF_INI={b:['d','p','q'],d:['b','p','t'],p:['b','q','d'],m:['n','l'],n:['
 const CONF_FIN={an:'ang',ang:'an',en:'eng',eng:'en',in:'ing',ing:'in',uan:'uang',uang:'uan',ian:'iang',un:'ong',ong:'un',
   ui:'iu',iu:'ui',ie:'ue',ue:'ie',ei:'ie',ao:'ou',ou:'ao',uo:'o',ai:'ei',ia:'ie',iao:'iu',uai:'ai',iong:'ong',ua:'uo',e:'o',a:'o',u:'o',v:'u'};
 function splitPy(p){const b=base(p),i=INITIALS.find(x=>b.startsWith(x))||'';return {ini:i,fin:b.slice(i.length),t:+p.slice(-1)};}
+/* 三拼音节拆成 声母 + 介母 + 韵母（介母不标调，声调标在韵母上），如 g + u + āng */
+const MEDIAL={ia:'a',iao:'ao',ian:'an',iang:'ang',iong:'ong',ua:'a',uo:'o',uai:'ai',uan:'an',uang:'ang'};
 function makeSpellQ(it,retry){
   const {ini,fin,t}=splitPy(it.p);
+  const three=!!MEDIAL[fin]&&!/^[yw]$/.test(ini), f=three?MEDIAL[fin]:fin, med=three?fin[0]:'';
+  const nIni=three?3:4, nFin=three?3:4;
   const inis=[ini];
-  for(const x of shuffle((CONF_INI[ini]||[]).slice()).concat(shuffle(INITIALS.slice()))) if(inis.length<4&&!inis.includes(x)) inis.push(x);
-  const fins=[fin+t], addF=f=>{if(fins.length<4&&!fins.includes(f)&&py(f)!==py(fin+t))fins.push(f);};
-  if(/^[jqxy]$/.test(ini)&&fin[0]==='u') addF('v'+fin.slice(1)+t);
-  if(CONF_FIN[fin]) addF(CONF_FIN[fin]+t);
-  shuffle([1,2,3,4].filter(u=>u!==t)).forEach(u=>addF(fin+u));
-  return {it,type:'spell',inis:shuffle(inis),fins:shuffle(fins),sel:[null,null],opts:[],ans:it.p,retry};
+  for(const x of shuffle((CONF_INI[ini]||[]).slice()).concat(shuffle(INITIALS.slice()))) if(inis.length<nIni&&!inis.includes(x)) inis.push(x);
+  const fins=[f+t], addF=x=>{if(fins.length<nFin&&!fins.includes(x)&&py(x)!==py(f+t))fins.push(x);};
+  if(!three&&/^[jqxy]$/.test(ini)&&fin[0]==='u') addF('v'+fin.slice(1)+t);
+  if(CONF_FIN[f]) addF(CONF_FIN[f]+t);
+  shuffle([1,2,3,4].filter(u=>u!==t)).forEach(u=>addF(f+u));
+  const meds=three?[med,med==='i'?'u':'i']:[];
+  // 声母、介母、韵母混在一起打乱，孩子要自己分清哪个放前面
+  const tiles=shuffle([...inis.map(v=>({v,s:v})),...meds.map(v=>({v,s:v})),...fins.map(v=>({v,s:py(v)}))]);
+  return {it,type:'spell',n:three?3:2,tiles,sel:Array(three?3:2).fill(null),opts:[],ans:it.p,retry};
 }
 function makeQ(it,retry=false){
   if(it.cat==='tdrill') return makeToneQ(it,retry);
@@ -789,9 +797,9 @@ function next(){
     <div class="prompt" style="margin-bottom:10px">${hintMode&&it.e?`<div class="pic">${it.e}</div>`:''}
       <div class="hanmid han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div>
       ${hintMode&&soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>
-    <div class="slots"><button class="slot py" id="s0"></button><span>+</span><button class="slot py" id="s1"></button><span>=</span><span class="slot res py" id="s2">？</span></div>
-    <div class="tlabel">声母</div><div class="tiles">${q.inis.map(x=>`<button class="tile py" data-i="${x}">${x}</button>`).join('')}</div>
-    <div class="tlabel">韵母</div><div class="tiles">${q.fins.map(x=>`<button class="tile py" data-f="${x}">${py(x)}</button>`).join('')}</div>`;
+    <div class="slots">${[...Array(q.n)].map((_,k)=>`<button class="slot py" id="s${k}"></button>`).join('<span>+</span>')}<span>=</span><span class="slot res py" id="sres">？</span></div>
+    <div class="tlabel">${q.n===3?'三拼音节：声母 + 介母 + 韵母，按顺序放进格子':'声母 + 韵母，按顺序放进格子'}</div>
+    <div class="tiles">${q.tiles.map((x,i)=>`<button class="tile py" data-t="${i}">${x.s}</button>`).join('')}</div>`;
   else prompt=`<div class="qlabel">${hintMode?'读一读拼音，选出对的图':'这个拼音是哪个字？'}</div>
     <div class="prompt"><div class="pybig py">${py(it.p)}</div></div>`;
   const isHan=q.type==='p2c', isPic=isHan&&hintMode;
@@ -810,9 +818,8 @@ function next(){
   document.getElementById('quit').onclick=askQuit;
   app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(b));
   if(q.type==='spell'){
-    app.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>pickTile(0,b.dataset.i));
-    app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>pickTile(1,b.dataset.f));
-    [0,1].forEach(k=>document.getElementById('s'+k).onclick=()=>pickTile(k,null));  // 点格子可以清掉重选
+    app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>pickTile(+b.dataset.t));
+    q.sel.forEach((_,k)=>document.getElementById('s'+k).onclick=()=>pickTile(null,k));  // 点格子可以拿出来重放
   }
   const spk=document.getElementById('spk');
   if(spk){spk.onclick=()=>speak(sayItem(it));speak(sayItem(it));}
@@ -1007,20 +1014,21 @@ function askQuit(){
   document.getElementById('stay').onclick=()=>{sh.remove(); if(L&&L.answered){next();} };
   document.getElementById('leave').onclick=()=>{sh.remove();home();};
 }
-/* 拼一拼：点声母、韵母放进格子，两个都放好就判断（考试里先不判断，点下一题才算） */
-function pickTile(k,v){
+/* 拼一拼：点卡片放进第一个空格，点空格拿出来；格子都填满就判断（考试里先不判断，点下一题才算）。
+   顺序放错也算错，比如 āng + g */
+function pickTile(ti,slot){
   unlockAudio();
   const q=L.q; if(L.answered) return;
-  q.sel[k]=v; if(v) sfx('tap');
-  const attr=k?'f':'i';
-  app.querySelectorAll(`[data-${attr}]`).forEach(b=>b.classList.toggle('sel',b.dataset[attr]===v));
-  const [i,f]=q.sel, s=i&&f?i+f:null;
-  document.getElementById('s0').textContent=i||''; document.getElementById('s1').textContent=f?py(f):'';
-  document.getElementById('s2').textContent=s?py(s):'？';
+  if(slot!=null) q.sel[slot]=null;
+  else{ const k=q.sel.indexOf(null); if(k<0||q.sel.includes(ti)) return; q.sel[k]=ti; sfx('tap'); }
+  app.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('used',q.sel.includes(+b.dataset.t)));
+  q.sel.forEach((x,k)=>document.getElementById('s'+k).textContent=x==null?'':q.tiles[x].s);
+  const full=!q.sel.includes(null), s=full?q.sel.map(x=>q.tiles[x].v).join(''):null;
+  document.getElementById('sres').textContent=full?q.sel.map(x=>q.tiles[x].s).join(''):'？';
   if(L.mode==='exam'){L.pick=s;const nb=document.getElementById('exnext');nb.disabled=!s;nb.className=s?'big blue':'big gray';return;}
   if(!s) return;
   answer({dataset:{v:s},classList:{add(){}}});
-  document.getElementById('s2').classList.add(s===q.ans?'ok':'bad');
+  document.getElementById('sres').classList.add(s===q.ans?'ok':'bad');
 }
 const PRAISE=['太棒了！','真厉害！','答对啦！','完美！','好样的！','你真聪明！'];
 function answer(btn){

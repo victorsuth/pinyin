@@ -59,12 +59,15 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   then shuffles (so the derived all-character categories don't dominate).
 - **拼一拼** (`spell`, `makeSpellQ()`, `pickTile()`): items are every bank
   character once (`ITEMS.spell`, like tdrill). `splitPy()` splits the syllable
-  into 声母 (`INITIALS`, y/w count as initials) + 韵母 with the tone number
-  (medial goes with the final: g + uang1). 4 initial tiles (`CONF_INI`
-  look-alikes / flat-vs-retroflex) and 4 final tiles (`CONF_FIN` confusable
-  final, other tones of the same final, and `v…` after j q x y to drill the
-  去两点 rule). Picking both auto-checks via `answer()` with a fake button; in
-  the exam it only sets `L.pick`. Tapping a slot clears it.
+  into 声母 (`INITIALS`, y/w count as initials) + 韵母 with the tone number.
+  三拼音节 (`MEDIAL` table: ia iao ian iang iong ua uo uai uan uang, not after
+  y/w) get three slots 声母 + 介母 + 韵母 (g + u + āng; tone on the final).
+  All tiles (8: initials from `CONF_INI`, the right + other medial, finals
+  from `CONF_FIN` / other tones / `v…` after j q x y) are shuffled into ONE
+  pool — the child must know which goes first (parent's request); wrong order
+  counts as wrong. Tap a tile → first empty slot; tap a slot → take it out;
+  all filled → auto-check via `answer()` with a fake button (exam: only sets
+  `L.pick`).
 - **听音连连看** (`mode==='letters'`, not in ORDER, home card next to 混合挑战;
   `startLetters()`/`letterRound()`/`pickLetter()`): 3 rounds × 4 pairs; left
   column speaker buttons, right column letters; tap speaker (plays the letter's

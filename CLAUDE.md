@@ -20,10 +20,29 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   never rename/remove existing storage keys (the child would lose progress).
 
 ## How the game works
-- 8 categories + 混合挑战 + 错题本复习 + 综合考试:
+- 9 categories (`ORDER`) + 听音连连看 + 混合挑战 + 错题本复习 + 综合考试:
   `nasal` 前后鼻音, `pingqiao` 平舌翘舌, `shape` 形近字母 (b/d/p/q, m/n, f/t),
-  `tone` 声调, `tdrill` 声调专练, `umlaut` ü 的规则, `whole` 整体认读,
-  `triple` 三拼音节.
+  `tone` 声调, `tdrill` 声调专练, `spell` 拼一拼, `umlaut` ü 的规则,
+  `whole` 整体认读, `triple` 三拼音节. 混合挑战 takes up to 3 per category,
+  then shuffles (so the derived all-character categories don't dominate).
+- **拼一拼** (`spell`, `makeSpellQ()`, `pickTile()`): items are every bank
+  character once (`ITEMS.spell`, like tdrill). `splitPy()` splits the syllable
+  into 声母 (`INITIALS`, y/w count as initials) + 韵母 with the tone number
+  (medial goes with the final: g + uang1). 4 initial tiles (`CONF_INI`
+  look-alikes / flat-vs-retroflex) and 4 final tiles (`CONF_FIN` confusable
+  final, other tones of the same final, and `v…` after j q x y to drill the
+  去两点 rule). Picking both auto-checks via `answer()` with a fake button; in
+  the exam it only sets `L.pick`. Tapping a slot clears it.
+- **听音连连看** (`mode==='letters'`, not in ORDER, home card next to 混合挑战;
+  `startLetters()`/`letterRound()`/`pickLetter()`): 3 rounds × 4 pairs; left
+  column speaker buttons, right column letters; tap speaker (plays the letter's
+  呼读音) then the letter; correct pairs get an SVG line. Rounds are drawn
+  from `LETTER_GROUPS` (confusable sets), weighted by the new storage key
+  `letterHist` (wrong count per letter, only grows). `LETTERS` = 23 声母 +
+  24 韵母 with the char/pinyin used to synthesize each sound (`letter|x` audio
+  keys; f 佛 fó, d 得 dé, t 特 tè, n 讷 nè, l 勒 lè, r 日 rì, er 儿 ér, the
+  rest first tone; o uses 哦 because 喔 came out with a hump). Stars via
+  `finish()` like a lesson (`prog.letters`).
 - **声调专练** (`tdrill`, wide yellow card): the child is weak at tones. Its
   items are every bank character once (`ITEMS.tdrill`, built after the other
   categories, `cat:'tdrill'` so mistakes/review stay tone questions). Types
@@ -74,7 +93,7 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 - If an item's 汉字 is replaced, its old `cat|字` keys stay in `mistakes` /
   `wrongHist` (never delete progress); `mistakeKeys()` skips keys without a
   matching item, and `buildExam()` only iterates `ALL`.
-- Storage keys: `prog`, `mistakes` (current 错题本, decremented by review),
+- Storage keys: `prog`, `letterHist`, `mistakes` (current 错题本, decremented by review),
   `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
   `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,
   `today`, `speed`, `hint`.

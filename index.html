@@ -120,6 +120,30 @@ button{font-family:inherit;cursor:pointer}
 .stat span{font-size:13px;color:var(--muted)}
 .rbtns{display:flex;flex-direction:column;gap:12px;margin-top:10px}
 
+/* 听音连连看 */
+.board{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:64px;margin-top:18px}
+.bcol{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.lines line{stroke:var(--green);stroke-width:6;stroke-linecap:round}
+.lspk,.lcard{height:72px;border-radius:16px;border:2px solid var(--line);border-bottom-width:5px;background:var(--card);font-weight:800}
+.lspk{font-size:30px;color:var(--blue-d);position:relative}
+.lspk span{position:absolute;left:10px;top:6px;font-size:13px;color:#bbb;font-family:sans-serif}
+.lcard{font-size:34px;color:var(--text)}
+.lspk.sel{background:var(--blue-bg);border-color:var(--blue)}
+.lspk.done,.lcard.done{background:var(--green-bg);border-color:var(--green);color:var(--green-d)}
+.lcard.bad{background:var(--red-bg);border-color:var(--red);color:var(--red-d);animation:shake .35s}
+/* 拼一拼 */
+.slots{display:flex;align-items:center;justify-content:center;gap:8px;font-size:26px;font-weight:800;color:var(--muted);margin:4px 0 14px}
+.slot{min-width:72px;height:60px;border:2px dashed #c9c9c9;border-radius:14px;background:var(--card);font-size:30px;font-weight:700;
+  color:var(--text);display:inline-flex;align-items:center;justify-content:center;padding:0 8px}
+.slot.res{border-style:solid;min-width:96px;color:var(--blue-d)}
+.slot.res.ok{border-color:var(--green);background:var(--green-bg);color:var(--green-d)}
+.slot.res.bad{border-color:var(--red);background:var(--red-bg);color:var(--red-d)}
+.tlabel{font-size:14px;font-weight:700;color:var(--muted);margin:8px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:14px;padding:12px 2px;font-size:26px;font-weight:700;color:var(--text)}
+.tile:active{transform:translateY(3px);border-bottom-width:2px}
+.tile.sel{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-d)}
 /* exam */
 .bsub{font-size:13px;font-weight:600;opacity:.92;margin-top:3px}
 .opt.sel{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-d)}
@@ -240,7 +264,10 @@ const CATS = {
     ]},
   tdrill:{name:'声调专练',emoji:'🎶',desc:'听音辨调 · 认声调 · 标调位置',types:['tlisten','tmark','tmark','tplace'],
     tip:'一声平平高高走，二声从下往上扬，三声先降再扬起，四声从上往下降。标调口诀：有 a 不放过，没 a 找 o e，i u 并列标在后。',
-    items:[]}   // 题目用上面所有类型里的字，见 ITEMS.tdrill
+    items:[]},   // 题目用上面所有类型里的字，见 ITEMS.tdrill
+  spell:{name:'拼一拼',emoji:'🧩',desc:'声母 + 韵母，自己拼',types:['spell'],
+    tip:'先找声母，再找带声调的韵母，合起来就是这个字的音节。j q x y 遇到 ü，要把两点去掉写成 u。',
+    items:[]}    // 同上，见 ITEMS.spell
 };
 /* 图片提示：不认识的字也能靠图猜出意思 */
 const EMO={
@@ -259,14 +286,30 @@ const EMO={
   '小':'🐜','雪':'❄️','双':'🧦','刷':'🪥','电':'📞',
   '房':'🏠','虫':'🐛','气':'⛅','彩':'🌈','鸡':'🐤','米':'🌽','牛':'🐮','羊':'🐑','玉':'🌽'
 };
-const ORDER=['nasal','pingqiao','shape','tone','tdrill','umlaut','whole','triple'];
+const ORDER=['nasal','pingqiao','shape','tone','tdrill','spell','umlaut','whole','triple'];
 const ITEMS={};let ALL=[];
 ORDER.forEach(id=>{ITEMS[id]=CATS[id].items.map(([c,w,p,d])=>({c,w,p,d,e:EMO[c]||'',cat:id}));ALL=ALL.concat(ITEMS[id]);});
-/* 声调专练：全部题库的字（同一个字只要一次），只考声调 */
-ITEMS.tdrill=[...new Map(ALL.map(i=>[i.c,{...i,cat:'tdrill'}])).values()];ALL=ALL.concat(ITEMS.tdrill);
+/* 声调专练、拼一拼：用全部题库的字（同一个字只要一次） */
+const allChars=cat=>[...new Map(ALL.map(i=>[i.c,{...i,cat}])).values()];
+ITEMS.tdrill=allChars('tdrill');ITEMS.spell=allChars('spell');ALL=ALL.concat(ITEMS.tdrill,ITEMS.spell);
 const TONE_NAME=['','一声 ˉ','二声 ˊ','三声 ˇ','四声 ˋ'];
 /* 声调小课堂：mā má mǎ mà 的示范读音 */
 const TONE_DEMO=[{c:'妈',py:'mā'},{c:'麻',py:'má'},{c:'马',py:'mǎ'},{c:'骂',py:'mà'}];
+/* 听音连连看：声母、韵母和它们的呼读音。[字母, 合成读音用的字（只听不显示）, 读音] */
+const LETTERS=[['b','玻','bo1'],['p','坡','po1'],['m','摸','mo1'],['f','佛','fo2'],['d','得','de2'],['t','特','te4'],
+  ['n','讷','ne4'],['l','勒','le4'],['g','哥','ge1'],['k','科','ke1'],['h','喝','he1'],['j','鸡','ji1'],['q','七','qi1'],
+  ['x','西','xi1'],['zh','知','zhi1'],['ch','吃','chi1'],['sh','诗','shi1'],['r','日','ri4'],['z','资','zi1'],['c','呲','ci1'],
+  ['s','思','si1'],['y','衣','yi1'],['w','乌','wu1'],
+  ['a','啊','a1'],['o','哦','o1'],['e','婀','e1'],['i','衣','yi1'],['u','乌','wu1'],['ü','迂','yu1'],['ai','哀','ai1'],
+  ['ei','诶','ei1'],['ui','威','wei1'],['ao','凹','ao1'],['ou','欧','ou1'],['iu','优','you1'],['ie','耶','ye1'],['üe','约','yue1'],
+  ['er','儿','er2'],['an','安','an1'],['en','恩','en1'],['in','因','yin1'],['un','温','wen1'],['ün','晕','yun1'],
+  ['ang','肮','ang1'],['eng','鞥','eng1'],['ing','英','ying1'],['ong','嗡','ong1']].map(([l,c,p])=>({l,c,p}));
+const LETTER=Object.fromEntries(LETTERS.map(x=>[x.l,x]));
+/* 每轮 4 个，从容易混的一组里出 */
+const LETTER_GROUPS=[['b','d','p','q'],['m','n','l','r'],['f','t','h','k'],['z','zh','c','ch'],['s','sh','x','r'],['j','q','x','g'],
+  ['an','ang','en','eng'],['in','ing','un','ün'],['ie','üe','ei','ui'],['iu','ui','ou','ao'],['u','ü','i','e'],['a','o','e','er'],
+  ['y','w','ü','u'],['ai','ei','ao','ou'],['ong','eng','ang','ing']];
+const LETTER_ROUNDS=3;
 const LESSON_LEN=10, DAILY_GOAL=3;
 const EXAM_LEN=20, EXAM_WRONG_MAX=14;   // 综合考试：20 题，其中最多 14 题来自错过的题
 
@@ -302,6 +345,8 @@ function mistakeKeys(){return Object.entries(mistakes).filter(([k,n])=>n>0&&find
 function findItem(k){const [cat,c]=k.split('|');return (ITEMS[cat]||[]).find(i=>i.c===c);}
 /* wrongHist：每道题累计错过几次，只增不减（错题本复习答对会移出，这里还留着，考试用） */
 let wrongHist=store.get('wrongHist',{}), exams=store.get('exams',[]);
+/* letterHist：听音连连看里每个字母连错过几次，只增不减，用来多出错过的那组 */
+let letterHist=store.get('letterHist',{});
 function bumpMistake(it,d){const k=it.cat+'|'+it.c;mistakes[k]=Math.max(0,(mistakes[k]||0)+d);if(!mistakes[k])delete mistakes[k];store.set('mistakes',mistakes);
   if(d>0){wrongHist[k]=(wrongHist[k]||0)+d;store.set('wrongHist',wrongHist);}}
 
@@ -324,7 +369,7 @@ const CLIPS=new Set(((window.AUDIO_CLIPS||{})[VOICE])||[]);
 const hasAudio=CLIPS.size>0, soundOK=()=>hasAudio||voiceOK;
 function fnv(s){let h=0x811c9dc5;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36);}
 /* 文件名 = 内容的哈希，生成脚本用同样的算法 */
-const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:`say|${o.t.replace(/\s+/g,'')}`;
+const clipKey=o=>o.it?`item|${o.it.c}|${o.it.p}|${o.it.w}`:o.l?`letter|${o.l}`:`say|${o.t.replace(/\s+/g,'')}`;
 function clipURL(o){const k=fnv(clipKey(o));return CLIPS.has(k)?`audio/${VOICE}/${k}.mp3`:null;}
 let player=null, playQ=[];
 const warmed=new Set();
@@ -349,7 +394,7 @@ function speak(text){
   const urls=segs.map(clipURL);
   if(urls.every(Boolean)) return playClips(segs.map((o,i)=>({url:urls[i],rate:o.it?SPEEDS[speedIdx].play:1})));
   if(!voiceOK||!('speechSynthesis' in window)) return;
-  const parts=segs.flatMap(o=>o.it?[o.it.c,o.it.w,`${o.it.w}的${o.it.c}`].map(t=>({t})):[o]);
+  const parts=segs.flatMap(o=>o.it?[o.it.c,o.it.w,`${o.it.w}的${o.it.c}`].map(t=>({t})):o.l?[{t:LETTER[o.l].c}]:[o]);
   try{
     parts.forEach(o=>{
       const u=new SpeechSynthesisUtterance(o.t);
@@ -424,7 +469,7 @@ function topbar(){
     <span class="chip xp">⭐ ${xp}</span></div>`;
 }
 function home(){
-  stopSpeech(); document.querySelectorAll('.sheet').forEach(s=>s.remove());
+  stopSpeech(); document.querySelectorAll('.sheet,.confetti').forEach(s=>s.remove());
   screen='home';
   const m=mistakeKeys().length;
   const last=exams[exams.length-1], best=exams.reduce((s,e)=>Math.max(s,e.score),0);
@@ -435,12 +480,14 @@ function home(){
       <button class="cat${id==='tdrill'?' wide':''}" data-mode="${id}"><div class="emoji">${c.emoji}</div>
       <div class="cname">${c.name}</div><div class="cdesc py">${c.desc}</div>
       ${starsHTML((prog[id]||{}).stars||0)}</button>`;}).join('')}
+      <button class="cat" data-mode="letters"><div class="emoji">🔤</div><div class="cname">听音连连看</div>
+      <div class="cdesc">听声音，连字母</div>${starsHTML((prog.letters||{}).stars||0)}</button>
       <button class="cat" data-mode="mix"><div class="emoji">🎲</div><div class="cname">混合挑战</div>
       <div class="cdesc">所有类型随机出题</div>${starsHTML((prog.mix||{}).stars||0)}</button>
     </div>
     <div class="row2" style="grid-template-columns:1fr">
       <button class="big blue" data-mode="exam">📝 综合考试（${EXAM_LEN} 题）
-        <div class="bsub">${last?`上次 ${last.score} 分 · 最好 ${best} 分`:m||Object.keys(wrongHist).length?'重点考以前错过的题':'七类拼音都会考到'}</div></button>
+        <div class="bsub">${last?`上次 ${last.score} 分 · 最好 ${best} 分`:m||Object.keys(wrongHist).length?'重点考以前错过的题':'各类拼音都会考到'}</div></button>
       <button class="big ${m?'orange':'gray'}" data-mode="review" ${m?'':'disabled'}>📒 错题本复习 ${m?`（${m} 个）`:'（还没有错题）'}</button>
     </div>
     <div class="speedrow">🖼️ 模式：<button class="spd ${hintMode?'on':''}" data-hint="1">看图+读字</button><button class="spd ${hintMode?'':'on'}" data-hint="0">挑战（不提示）</button></div>
@@ -509,8 +556,29 @@ function makeToneQ(it,retry){
   }
   return {it,type,opts:[1,2,3,4].map(u=>b+u),ans:it.p,retry};
 }
+/* 拼一拼：音节拆成声母 + 带调的韵母（三拼音节的介母算在韵母里，如 g + uāng）。
+   干扰项：形近、平翘舌的声母；前后鼻音等易混韵母和同一韵母的别的声调；
+   j q x y 后面的 u 再放一个 ü，练「去掉两点」 */
+const INITIALS=['zh','ch','sh','b','p','m','f','d','t','n','l','g','k','h','j','q','x','r','z','c','s','y','w'];
+const CONF_INI={b:['d','p','q'],d:['b','p','t'],p:['b','q','d'],m:['n','l'],n:['m','l'],l:['n','r'],f:['t','h'],t:['f','d'],
+  g:['k','h'],k:['g','h'],h:['f','k'],j:['q','x','zh'],q:['j','x','p'],x:['j','q','sh'],zh:['z','ch','j'],ch:['c','zh','q'],
+  sh:['s','x','ch'],r:['l','y'],z:['zh','c','s'],c:['ch','z','s'],s:['sh','z','c'],y:['w','j'],w:['y','h']};
+const CONF_FIN={an:'ang',ang:'an',en:'eng',eng:'en',in:'ing',ing:'in',uan:'uang',uang:'uan',ian:'iang',un:'ong',ong:'un',
+  ui:'iu',iu:'ui',ie:'ue',ue:'ie',ei:'ie',ao:'ou',ou:'ao',uo:'o',ai:'ei',ia:'ie',iao:'iu',uai:'ai',iong:'ong',ua:'uo',e:'o',a:'o',u:'o',v:'u'};
+function splitPy(p){const b=base(p),i=INITIALS.find(x=>b.startsWith(x))||'';return {ini:i,fin:b.slice(i.length),t:+p.slice(-1)};}
+function makeSpellQ(it,retry){
+  const {ini,fin,t}=splitPy(it.p);
+  const inis=[ini];
+  for(const x of shuffle((CONF_INI[ini]||[]).slice()).concat(shuffle(INITIALS.slice()))) if(inis.length<4&&!inis.includes(x)) inis.push(x);
+  const fins=[fin+t], addF=f=>{if(fins.length<4&&!fins.includes(f)&&py(f)!==py(fin+t))fins.push(f);};
+  if(/^[jqxy]$/.test(ini)&&fin[0]==='u') addF('v'+fin.slice(1)+t);
+  if(CONF_FIN[fin]) addF(CONF_FIN[fin]+t);
+  shuffle([1,2,3,4].filter(u=>u!==t)).forEach(u=>addF(fin+u));
+  return {it,type:'spell',inis:shuffle(inis),fins:shuffle(fins),sel:[null,null],opts:[],ans:it.p,retry};
+}
 function makeQ(it,retry=false){
   if(it.cat==='tdrill') return makeToneQ(it,retry);
+  if(it.cat==='spell') return makeSpellQ(it,retry);
   const types=CATS[it.cat].types.filter(t=>t!=='listen'||soundOK());
   let type=types[Math.floor(Math.random()*types.length)];
   if(type==='p2c'&&hintMode){
@@ -557,10 +625,14 @@ function buildExam(){
 }
 function startLesson(mode){
   unlockAudio(); unlockSpeech();
+  if(mode==='letters') return startLetters();
   let pool;
   if(mode==='exam') pool=buildExam();
   else if(mode==='review') pool=mistakeKeys().map(findItem).filter(Boolean).slice(0,LESSON_LEN);
-  else if(mode==='mix') pool=shuffle(ALL.slice()).slice(0,LESSON_LEN);
+  else if(mode==='mix'){  // 每类先抽几个，再打乱，同一个字只出一次
+    const seen=new Set();
+    pool=shuffle(ORDER.flatMap(id=>shuffle(ITEMS[id].slice()).slice(0,3))).filter(i=>!seen.has(i.c)&&seen.add(i.c)).slice(0,LESSON_LEN);
+  }
   else pool=shuffle(ITEMS[mode].slice()).slice(0,LESSON_LEN);
   if(!pool.length) return home();
   L={mode,queue:pool.map(it=>makeQ(it)),done:0,firstTotal:pool.length,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[]};
@@ -594,6 +666,13 @@ function next(){
     <div class="prompt"><div class="pybig py">${base(it.p).replace(/v/g,'ü')}</div>
       <div class="word"><b>${TONE_NAME[+it.p.slice(-1)]}</b>${hintMode?`　${it.e} <span class="han">${it.c}</span>`:''}</div>
       ${hintMode&&soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>`;
+  else if(q.type==='spell') prompt=`<div class="qlabel">拼一拼，这个字怎么拼？</div>
+    <div class="prompt" style="margin-bottom:10px">${hintMode&&it.e?`<div class="pic">${it.e}</div>`:''}
+      <div class="hanmid han">${it.c}</div><div class="word han">${hl(it.w,it.c)}</div>
+      ${hintMode&&soundOK()?'<button class="minispk" id="spk">🔊 再听一遍</button>':''}</div>
+    <div class="slots"><button class="slot py" id="s0"></button><span>+</span><button class="slot py" id="s1"></button><span>=</span><span class="slot res py" id="s2">？</span></div>
+    <div class="tlabel">声母</div><div class="tiles">${q.inis.map(x=>`<button class="tile py" data-i="${x}">${x}</button>`).join('')}</div>
+    <div class="tlabel">韵母</div><div class="tiles">${q.fins.map(x=>`<button class="tile py" data-f="${x}">${py(x)}</button>`).join('')}</div>`;
   else prompt=`<div class="qlabel">${hintMode?'读一读拼音，选出对的图':'这个拼音是哪个字？'}</div>
     <div class="prompt"><div class="pybig py">${py(it.p)}</div></div>`;
   const isHan=q.type==='p2c', isPic=isHan&&hintMode;
@@ -611,8 +690,85 @@ function next(){
   if(exam) document.getElementById('exnext').onclick=examNext;
   document.getElementById('quit').onclick=askQuit;
   app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(b));
+  if(q.type==='spell'){
+    app.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>pickTile(0,b.dataset.i));
+    app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>pickTile(1,b.dataset.f));
+    [0,1].forEach(k=>document.getElementById('s'+k).onclick=()=>pickTile(k,null));  // 点格子可以清掉重选
+  }
   const spk=document.getElementById('spk');
   if(spk){spk.onclick=()=>speak(sayItem(it));speak(sayItem(it));}
+}
+/* ================= 听音连连看 =================
+   左边喇叭（点了听声音），右边字母，点喇叭再点字母连起来。一关 3 轮，每轮 4 对 */
+function startLetters(){
+  const w=g=>1+g.reduce((s,l)=>s+(letterHist[l]||0),0);   // 错得多的组多出
+  const gs=[],left=LETTER_GROUPS.slice();
+  while(gs.length<LETTER_ROUNDS&&left.length){
+    let r=Math.random()*left.reduce((s,g)=>s+w(g),0),i=0;
+    while(i<left.length-1&&(r-=w(left[i]))>=0) i++;
+    gs.push(left.splice(i,1)[0]);
+  }
+  L={mode:'letters',rounds:gs,ri:0,done:0,firstTotal:gs.length*4,firstCorrect:0,combo:0,maxCombo:0,gained:0,answers:[],queue:[]};
+  preload(PRAISE.map(cheer));
+  letterRound();
+}
+function letterRound(){
+  stopSpeech(); document.querySelectorAll('.sheet').forEach(s=>s.remove());
+  screen='lesson';
+  const g=L.rounds[L.ri];
+  L.lr={left:shuffle(g.slice()),right:shuffle(g.slice()),sel:null,matched:new Set(),missed:new Set()};
+  preload(g.map(l=>({l})));
+  app.innerHTML=`<div class="lhead"><button class="xbtn" id="quit">✕</button>
+      <div class="bar"><i id="lbar" style="width:${L.done/L.firstTotal*100}%"></i></div>
+      <div class="combo" id="lcombo">${L.combo>=2?`🔥×${L.combo}`:''}</div></div>
+    <div class="qlabel">听一听，连一连</div>
+    <div class="hint" id="lhint">先点左边的喇叭听声音，再点右边对应的字母（第 ${L.ri+1} / ${L.rounds.length} 组）</div>
+    <div class="board" id="board"><svg class="lines" id="lines"></svg>
+      <div class="bcol">${L.lr.left.map((l,i)=>`<button class="lspk" data-l="${l}">🔊<span>${i+1}</span></button>`).join('')}</div>
+      <div class="bcol">${L.lr.right.map(l=>`<button class="lcard py" data-r="${l}">${l}</button>`).join('')}</div></div>`;
+  document.getElementById('quit').onclick=askQuit;
+  app.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{
+    unlockAudio(); if(b.classList.contains('done')) return;
+    L.lr.sel=b.dataset.l; app.querySelectorAll('[data-l]').forEach(x=>x.classList.toggle('sel',x===b));
+    speak({l:b.dataset.l});
+  });
+  app.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>pickLetter(b));
+}
+function pickLetter(b){
+  unlockAudio();
+  const lr=L.lr, r=b.dataset.r; if(b.classList.contains('done')) return;
+  const hint=document.getElementById('lhint');
+  if(!lr.sel){hint.textContent='👈 先点左边的喇叭，听一听';b.classList.remove('bad');void b.offsetWidth;b.classList.add('bad');return;}
+  const spk=app.querySelector(`[data-l="${lr.sel}"]`);
+  if(r!==lr.sel){
+    sfx('bad'); L.combo=0; lr.missed.add(lr.sel);
+    letterHist[lr.sel]=(letterHist[lr.sel]||0)+1; store.set('letterHist',letterHist);
+    b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
+    hint.textContent='不对哦，再听一听';
+    document.getElementById('lcombo').textContent='';
+    return;
+  }
+  // 连对：画线
+  sfx('ok'); lr.matched.add(r); L.done++; L.gained+=10;
+  L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo);
+  if(!lr.missed.has(r)) L.firstCorrect++;
+  [spk,b].forEach(x=>{x.classList.remove('sel','bad');x.classList.add('done');});
+  const bd=document.getElementById('board').getBoundingClientRect(), a=spk.getBoundingClientRect(), c=b.getBoundingClientRect();
+  document.getElementById('lines').insertAdjacentHTML('beforeend',
+    `<line x1="${a.right-bd.left}" y1="${a.top+a.height/2-bd.top}" x2="${c.left-bd.left}" y2="${c.top+c.height/2-bd.top}"/>`);
+  lr.sel=null; hint.textContent='连对了！接着点下一个喇叭';
+  document.getElementById('lbar').style.width=L.done/L.firstTotal*100+'%';
+  document.getElementById('lcombo').textContent=L.combo>=2?`🔥×${L.combo}`:'';
+  if(lr.matched.size<4) return;
+  // 这一组连完：夸一句，点继续进下一组（声音要在点按里开始，所以不自动跳）
+  const praise=PRAISE[Math.floor(Math.random()*PRAISE.length)];
+  speak(cheer(praise));
+  const last=L.ri>=L.rounds.length-1, sheet=document.createElement('div');
+  sheet.className='sheet ok';
+  sheet.innerHTML=`<div class="sheet-in"><div class="fb-title">✅ ${praise}这一组连完啦！</div>
+    <div class="sheet-btns"><button class="big green" id="cont">${last?'看看成绩':'下一组 ➜'}</button></div></div>`;
+  document.body.appendChild(sheet);
+  document.getElementById('cont').onclick=()=>{sheet.remove();if(last)finish();else{L.ri++;letterRound();}};
 }
 function askQuit(){
   if(document.querySelector('.sheet')) document.querySelectorAll('.sheet').forEach(x=>x.remove());
@@ -624,6 +780,21 @@ function askQuit(){
   document.body.appendChild(sh);
   document.getElementById('stay').onclick=()=>{sh.remove(); if(L&&L.answered){next();} };
   document.getElementById('leave').onclick=()=>{sh.remove();home();};
+}
+/* 拼一拼：点声母、韵母放进格子，两个都放好就判断（考试里先不判断，点下一题才算） */
+function pickTile(k,v){
+  unlockAudio();
+  const q=L.q; if(L.answered) return;
+  q.sel[k]=v; if(v) sfx('tap');
+  const attr=k?'f':'i';
+  app.querySelectorAll(`[data-${attr}]`).forEach(b=>b.classList.toggle('sel',b.dataset[attr]===v));
+  const [i,f]=q.sel, s=i&&f?i+f:null;
+  document.getElementById('s0').textContent=i||''; document.getElementById('s1').textContent=f?py(f):'';
+  document.getElementById('s2').textContent=s?py(s):'？';
+  if(L.mode==='exam'){L.pick=s;const nb=document.getElementById('exnext');nb.disabled=!s;nb.className=s?'big blue':'big gray';return;}
+  if(!s) return;
+  answer({dataset:{v:s},classList:{add(){}}});
+  document.getElementById('s2').classList.add(s===q.ans?'ok':'bad');
 }
 const PRAISE=['太棒了！','真厉害！','答对啦！','完美！','好样的！','你真聪明！'];
 function answer(btn){

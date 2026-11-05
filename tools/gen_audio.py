@@ -12,7 +12,7 @@
 
 需要：能访问 api.minimax.cn，并带上 MiniMax 密钥——
 环境变量 MINIMAX_API_KEY，或云端环境的 Network secrets（代理自动加 Authorization）。
-文本从 index.html 里读（题库 ALL、PRAISE、LESSON_MSG、EXAM_MSG、GOAL_MSG），
+文本从 index.html 里读（题库 ALL、PRAISE、LESSON_MSG、EXAM_MSG、GOAL_MSG、TONE_DEMO、LETTERS），
 文件名是 fnv1a(key) 的 36 进制，算法和 index.html 里的 fnv()/clipKey() 一致。
 """
 import json, os, re, subprocess, sys, time, urllib.request
@@ -57,7 +57,7 @@ const el={innerHTML:'',querySelectorAll:()=>[],onclick:null,hidden:false,textCon
 global.document={getElementById:()=>el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>({...el,remove(){}}),body:{appendChild(){}}};
 global.window={};
 """
-    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO}));"
+    tail = ";console.log(JSON.stringify({items:ALL.map(i=>({c:i.c,w:i.w,p:i.p})),PRAISE,LESSON_MSG,EXAM_MSG,GOAL_MSG,TONE_DEMO,LETTERS}));"
     out = subprocess.run(["node", "-e", stub + js + tail], capture_output=True, text=True, check=True).stdout
     return json.loads(out.strip().splitlines()[-1])
 
@@ -86,6 +86,10 @@ def jobs():
     for i, t in enumerate(d["TONE_DEMO"]):
         tries = [dict(text=f"第{'一二三四'[i]}声，{t['c']}。", emotion=e, speed=sp) for e, sp in DEMO_TRIES]
         js.append(dict(key=f"say|{t['c']}", pron=[f"{t['c']}/(ma{i + 1})"], tone=i + 1, seg="last", tries=tries, **tries[0]))
+    # 听音连连看：声母、韵母的呼读音（用一个同音字合成，读音写死，也要过声调检查）
+    for x in d["LETTERS"]:
+        tries = [dict(text=f"{x['c']}{pu}", emotion=e, speed=sp) for pu, e, sp in ITEM_TRIES]
+        js.append(dict(key=f"letter|{x['l']}", pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), seg="first", tries=tries, **tries[0]))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]
     says += [f"连对{n}题！" for n in range(3, 31)]
     says += [f"{n}分！" for n in range(0, 101)]

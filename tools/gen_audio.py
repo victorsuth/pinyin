@@ -163,14 +163,15 @@ def asr_text(path):
 
 
 def heard_ok(path, syllable):
-    """识别出的第一个字有没有这个音节的读音（同音字也算）"""
+    """识别出的第一个字，常用读音是不是这个音节（同音字也算）"""
     from pypinyin import pinyin, Style
     text = asr_text(path)
     ch = next((c for c in text if "\u4e00" <= c <= "\u9fff"), None)
     if not ch:
         return False, text
-    reads = {re.sub(r"\d", "", x).replace("ü", "v") for x in pinyin(ch, heteronym=True, style=Style.TONE3)[0]}
-    return syllable in reads, text
+    # 只看常用读音：n 的读音曾被识别成「那」，「那」虽然也有 nè 的读音，实际念的是 na
+    main = re.sub(r"\d", "", pinyin(ch, style=Style.TONE3)[0][0]).replace("ü", "v")
+    return syllable == main, text
 
 
 def write_manifest():

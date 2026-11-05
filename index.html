@@ -612,7 +612,11 @@ function buildExam(){
   const w=it=>{const k=it.cat+'|'+it.c;return 3*(mistakes[k]||0)+(wrongHist[k]||0);};
   let n=0;
   for(const {it} of ALL.filter(it=>w(it)>0).map(it=>({it,s:w(it)+Math.random()})).sort((a,b)=>b.s-a.s)){
-    if(n>=EXAM_WRONG_MAX)break; if(take(it))n++;
+    if(n>=EXAM_WRONG_MAX)break;
+    // 留够名额：每类至少还能出一题
+    const left=ORDER.filter(id=>id!==it.cat&&!picked.some(x=>x.cat===id)).length;
+    if(picked.length+1+left>EXAM_LEN) continue;
+    if(take(it))n++;
   }
   ORDER.forEach(id=>{if(!picked.some(it=>it.cat===id))take(shuffle(ITEMS[id].filter(it=>!usedC.has(it.c)))[0]);});
   const cw={};ORDER.forEach(id=>{cw[id]=1+(3-((prog[id]||{}).stars||0))+ITEMS[id].reduce((s,it)=>s+w(it),0)/3;});

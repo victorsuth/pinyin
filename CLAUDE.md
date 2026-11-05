@@ -38,8 +38,12 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
     (`firstTotal` = Σ(size−1)); a wrong pick replays the target sound and shows
     its tip.
   - 写一写 (`showWrite()`): top 6 letters by `letterHist`, or any learn group,
-    each with tip and six 四线格 (`grid4()`, 3 traced + 3 blank, red baseline);
-    🖨️ calls `window.print()`, `@media print` hides everything but the sheet.
+    each with tip and two full-width 四线格 rows (`grid4(l,traced)`: units are
+    mm — 180 wide = A4 writable width with `@page` 15 mm margins; lines 4 mm
+    apart (12 mm total, the common 拼音本 size — there is no official
+    standard); 6 equal slots so every letter gets the same width; first row
+    3 traced + 3 blank, second row blank; red baseline). 🖨️ calls
+    `window.print()`, `@media print` hides everything but the sheet.
 - The 声调 card merges the
   `tone` and `tdrill` categories: `startLesson('tone')` takes half its
   questions from the 四声对比 items and half from 声调专练; stars shown are the
@@ -127,7 +131,15 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
 - If an item's 汉字 is replaced, its old `cat|字` keys stay in `mistakes` /
   `wrongHist` (never delete progress); `mistakeKeys()` skips keys without a
   matching item, and `buildExam()` only iterates `ALL`.
-- Storage keys: `prog`, `letterHist`, `mistakes` (current 错题本, decremented by review),
+- **Letters in the 错题本:** a wrong 连连看 pick also adds to `letterMiss`
+  (current letter mistakes; `letterHist` stays lifetime-only). The review
+  button counts both (「含 N 个字母」). `startLesson('review')` first runs up
+  to 3 letter rounds (`letterReviewRounds()`: one missed letter, starred ⭐,
+  + 3 look-alikes per round), then the character review
+  (`startLesson('review',true)`). A first-try match in review decrements
+  `letterMiss`; a starred letter left as the last pair is never auto-connected
+  or counted (it would be answered by elimination).
+- Storage keys: `prog`, `letterHist`, `letterMiss`, `learned`, `mistakes` (current 错题本, decremented by review),
   `wrongHist` (lifetime wrong count per `cat|字`, only grows — feeds the exam),
   `exams` (last 30 results: date, score, n, wrong keys), `xp`, `streak`,
   `today`, `speed`, `hint`.

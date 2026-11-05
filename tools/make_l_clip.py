@@ -4,7 +4,9 @@
 （≈395Hz，和 b m d g 一样高）。家长选的是 c 那一版。
 用法：venv/bin/python tools/make_l_clip.py   （需要 praat-parselmouth、ffmpeg、MiniMax 密钥）
 结果在临时目录里，试听后手工复制到 audio/girl-v1/<fnv('letter|l|了|le1')>.mp3
-同样的办法可以用来修别的单念念不准的音。"""
+同样的办法可以用来修别的单念念不准的音。
+ong（letter|ong|公|ong1）就是这样做的：改念「公，公鸡的公。」（公/(gong1)），
+剪的起点改成有声开始后 20ms（去掉 g 的爆破音），开头加 50ms 淡入，家长选的是 a 那一版（稍长）。"""
 import sys, os, subprocess, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import parselmouth

@@ -35,7 +35,7 @@ SAY_AS = {}
 # 家长试听后手工选定的音频：--recheck-tones 也不重做（自动检查会误判它们）。
 # ai：埃 平调那版，识别器听成英文 "I"；er：儿 平调那版，识别成 "R"；
 # ang：单念总念成「洋洋」，这版是念「肮脏」后剪出来的第一个音节
-HAND_PICKED = {"letter|ai|埃|ai1", "letter|er|儿|er1", "letter|ang|昂|ang1"}
+HAND_PICKED = {"letter|ai|埃|ai1", "letter|er|儿|er1", "letter|ang|昂|ang1", "letter|n|哪|ne1"}
 
 ITEM_SPEED, SAY_SPEED = 0.8, 1.0
 

@@ -41,7 +41,9 @@ All UI copy is Simplified Chinese, written for a ~7-year-old.
   `letterHist` (wrong count per letter, only grows). `LETTERS` = 23 声母 +
   24 韵母 with the char/pinyin used to synthesize each sound (`letter|x` audio
   keys). All 声母 are read in the first tone as taught in class (the parent
-  rejected fó/dé/tè/nè/lè/rì); er is ér. Synthesis quirks: o uses 哦 (喔 had
+  rejected fó/dé/tè/nè/lè/rì); er is ēr too (parent rejected ér). Letter
+  audio keys are `letter|字母|合成字|拼音`, so changing a reading gives a new
+  URL (the mp3s are cached as immutable). Synthesis quirks: o uses 哦 (喔 had
   a hump); l uses 乐 pinned to le1 (勒 was read lēi); ai uses 埃 (哀 sounded
   like 欸; the kept clip was picked by the parent — ASR hears it as English
   "I", so a regenerate would wrongly reject it); ü read alone comes out

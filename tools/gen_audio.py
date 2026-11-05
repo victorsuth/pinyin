@@ -99,7 +99,7 @@ def jobs():
         # key 带上字和读音：换读音就换文件名，浏览器不会继续用缓存里的旧音频
         js.append(dict(key=f"letter|{x['l']}|{x['c']}|{x['p']}",pron=[f"{x['c']}/({x['p']})"], tone=int(x["p"][-1]), syl=x["p"][:-1], seg="first", tries=tries, **tries[0]))
     # 学一学的口诀：里面的读音字（佛、得、乐、儿、昂…）和字母读音一样写死成一声
-    for t in d["TIPS"]:
+    for t in dict.fromkeys(d["TIPS"]):  # 几个鼻韵母的口诀一样，只生成一次
         pron = sorted({f"{x['c']}/({x['p']})" for x in d["LETTERS"] if x["c"] in t})
         js.append(dict(key=f"say|{t}", text=t, pron=pron or None, speed=0.85, emotion=None))
     says = d["PRAISE"] + d["LESSON_MSG"] + d["EXAM_MSG"] + [d["GOAL_MSG"]]

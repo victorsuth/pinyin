@@ -32,6 +32,11 @@ VOICE = "girl-v1"
 # 熟 单念曾读成 shóu，后来按家长要求换掉了课本没教过另一个读音的常见多音字，所以现在是空的
 SAY_AS = {}
 
+# 家长试听后手工选定的音频：--recheck-tones 也不重做（自动检查会误判它们）。
+# ai：埃 平调那版，识别器听成英文 "I"；er：儿 平调那版，识别成 "R"；
+# ang：单念总念成「洋洋」，这版是念「肮脏」后剪出来的第一个音节
+HAND_PICKED = {"letter|ai|埃|ai1", "letter|er|儿|er1", "letter|ang|昂|ang1"}
+
 ITEM_SPEED, SAY_SPEED = 0.8, 1.0
 
 
@@ -198,7 +203,7 @@ def main():
         print("没装 pypinyin，不做读音识别检查")
     recheck = tones and "--recheck-tones" in sys.argv
     todo = [j for j in all_jobs if not os.path.exists(os.path.join(outdir, fnv(j["key"]) + ".mp3"))
-            or (recheck and j.get("tone"))]
+            or (recheck and j.get("tone") and j["key"] not in HAND_PICKED)]
     print(f"{VOICE}: {len(todo)} 个文件要生成，约 {sum(len(j['text']) for j in todo)} 字")
     if "--dry-run" in sys.argv:
         for j in todo:
